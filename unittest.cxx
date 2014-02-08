@@ -4,9 +4,9 @@
 // class unittest
 // {
 // public:
-// 	unittest();
+//  unittest();
 
-// 	~unittest();
+//  ~unittest();
 // };
 
 #include <fstream>
@@ -24,17 +24,17 @@ std::ostream& operator << ( std::ostream& o, const std::map<T, U> &m)
 
 int main(int argc, char const *argv[])
 {
-	optionparser::parser p;
+    optionparser::parser p;
 
-	p.add_option("--help", "-h", optionparser::store_true);
-	p.add_option("--file", "-f", optionparser::store_true, 1);
-	p.add_option("--save", "-s", optionparser::store_true);
+    p.add_option("--help", "-h", optionparser::store_true);
+    p.add_option("--file", "-f", optionparser::store_true, 1);
+    p.add_option("--save", "-s", optionparser::store_true);
 
-	std::cout << p.m_long_flags << std::endl;
-	std::cout << p.m_short_flags << std::endl;
+    std::cout << p.m_long_flags << std::endl;
+    std::cout << p.m_short_flags << std::endl;
 
-	p.eat_arguments(argc, argv);
+    p.eat_arguments(argc, argv);
 
 
-	return 0;
+    return 0;
 }

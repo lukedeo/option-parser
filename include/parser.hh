@@ -25,56 +25,56 @@ enum storage_mode { store_true, store_value, store_mult_values };
 class parser
 {
 public:
-	parser() = default;
-	~parser()= default;
+    parser() = default;
+    ~parser()= default;
 
-	void eat_arguments(int argc, char const *argv[]);
+    void eat_arguments(int argc, char const *argv[]);
 
-	void add_option(std::string longoption, std::string shortoption, storage_mode mode, bool required = false, std::string key = "");
-	// void add_option(std::string shortoption, storage_mode mode, std::string key = "", bool required = false);
+    void add_option(std::string longoption, std::string shortoption, storage_mode mode, bool required = false, std::string key = "");
+    // void add_option(std::string shortoption, storage_mode mode, std::string key = "", bool required = false);
 
-	// template <class T>
-	// T get_value(std::string key);
+    // template <class T>
+    // T get_value(std::string key);
 
 // private:
-	Archive m_options;
-	Dictionary m_long_flags, m_short_flags;
+    Archive m_options;
+    Dictionary m_long_flags, m_short_flags;
 };
 
 void parser::add_option(std::string longoption, std::string shortoption, 
-	storage_mode mode, bool required, std::string key)
+    storage_mode mode, bool required, std::string key)
 {
-	if (key == "")
-	{
-		key = remove_character(longoption, '-');
-	}
-	std::string req_string = "optional";
-	if (required)
-	{
-		req_string = "required";
-	}
-	m_long_flags[req_string][key] = longoption;
-	m_short_flags[req_string][key] = shortoption;
+    if (key == "")
+    {
+        key = remove_character(longoption, '-');
+    }
+    std::string req_string = "optional";
+    if (required)
+    {
+        req_string = "required";
+    }
+    m_long_flags[req_string][key] = longoption;
+    m_short_flags[req_string][key] = shortoption;
 }
 
 void parser::eat_arguments(int argc, char const *argv[])
 {
-	std::vector<std::string> arguments;
-	for (int i = 1; i < argc; ++i)
-	{
-		arguments.push_back(argv[i]);
-	}
+    std::vector<std::string> arguments;
+    for (int i = 1; i < argc; ++i)
+    {
+        arguments.push_back(argv[i]);
+    }
 
-	for (auto &entry : m_long_flags["optional"])
-	{
-		for (auto &arg : arguments)
-		{
-			if (arg == entry.second)
-			{
-				std::cout << "!!Found flag " << entry.second << " with key " << entry.first << std::endl;
-			}
-		}
-	}
+    for (auto &entry : m_long_flags["optional"])
+    {
+        for (auto &arg : arguments)
+        {
+            if (arg == entry.second)
+            {
+                std::cout << "!!Found flag " << entry.second << " with key " << entry.first << std::endl;
+            }
+        }
+    }
 }
 
 
