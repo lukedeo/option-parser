@@ -17,7 +17,7 @@ enum storage_mode { store_true, store_value, store_mult_values };
 struct option
 {
     option()
-    : value(3)
+    : value(0)
     {
     }
     bool &found() {return m_found;}
@@ -111,7 +111,8 @@ void parser::eat_arguments(int argc, char const *argv[])
                         {
                             option.second.found() = true;
                         }
-                        if (argument.size() > opt.long_flag().size())
+                        
+                        if(argument.size() > opt.long_flag().size())
                         {
                             option.second.found() = false;
                             if (opt.mode() != store_true)
@@ -132,7 +133,8 @@ void parser::eat_arguments(int argc, char const *argv[])
                                 }
                                 if (opt.mode() == store_value)
                                 {
-                                    option.second.value[0] = val;
+                                    option.second.value.clear();
+                                    option.second.value.push_back(val);
                                 }
                                 else
                                 {
@@ -162,9 +164,36 @@ void parser::eat_arguments(int argc, char const *argv[])
                                 std::string e("error, flag '" + opt.long_flag() + "' requires an argument.");
                                 error(e);
                             }
-
-                            option.second.value[0] = next_arg;
+                            option.second.value.clear();
+                            option.second.value.push_back(next_arg);
+                            option.second.found() = true;
                             std::cout << "value = " << option.second.value[0] << std::endl;
+                        }
+                        if ((opt.mode() == store_mult_values) && (option.second.found() == false))
+                        {
+                            if (++arg >= arguments.size())
+                            {
+                                std::string e("error, flag '" + opt.long_flag() + "' requires at least one argument.");
+                                error(e);
+                            }
+                            auto next_arg = arguments[arg];
+                            if (next_arg[0] == '-')
+                            {
+                                std::string e("error, flag '" + opt.long_flag() + "' requires at least one argument.");
+                                error(e);
+                            }
+                            while (next_arg[0] != '-')
+                            {
+
+                                option.second.value.push_back(next_arg);
+                                if (++arg >= arguments.size())
+                                {
+                                    break;
+                                }
+                                next_arg = arguments[arg];
+                            }
+                            arg--;
+                            option.second.found() = true;
                         }
                     }
                 }
@@ -223,6 +252,11 @@ unsigned int parser::get_value<unsigned int>(std::string key)
     return std::stoul(m_options[key].value[0]);
 }
 
+template <>
+std::vector<std::string> parser::get_value<std::vector<std::string>>(std::string key)
+{
+    return m_options[key].value;
+}
 
 
 
