@@ -88,11 +88,11 @@ void parser::add_option(std::string longoption, std::string shortoption,
     m_options[dest].mode() = mode;
     if (mode != store_true)
     {
-        with_val.insert(shortoption);
+        with_val.insert(remove_character(shortoption, '-'));
     }
     else
     {
-        without_val.insert(shortoption);
+        without_val.insert(remove_character(shortoption, '-'));
     }
     m_opt_map[remove_character(shortoption, '-')] = dest;
 }
@@ -116,7 +116,7 @@ void parser::eat_arguments(int argc, char const *argv[])
         {
             auto opt = option.second;
 
-            if ((argument[0] == '-'))
+            if (argument[0] == '-')
             {
                 if (argument.size() == 1)
                 {
@@ -129,6 +129,8 @@ void parser::eat_arguments(int argc, char const *argv[])
                         if (opt.mode() == store_true)
                         {
                             option.second.found() = true;
+                            match_found = true;
+                            break;
                         }
                         
                         if(argument.size() > opt.long_flag().size())
@@ -174,6 +176,8 @@ void parser::eat_arguments(int argc, char const *argv[])
                                     }
                                 }
                                 option.second.found() = true;
+                                match_found = true;
+                                break;
                             }
                             else
                             {
@@ -199,6 +203,8 @@ void parser::eat_arguments(int argc, char const *argv[])
                             option.second.value.clear();
                             option.second.value.push_back(next_arg);
                             option.second.found() = true;
+                            match_found = true;
+                            break;
                         }
                         if ((opt.mode() == store_mult_values) && (option.second.found() == false))
                         {
@@ -225,31 +231,50 @@ void parser::eat_arguments(int argc, char const *argv[])
                             }
                             arg--;
                             option.second.found() = true;
+                            match_found = true;
+                            break;
                         }
                     }
                 }
-                else
-                {
-
-                    auto trigger_char = remove_character(opt.short_flag(), '-');
-                    std::cout << "here..." << trigger_char<< std::endl;
-                    for (auto &each : argument)
-                    {
-                        std::string key(1, each);
-                        std::cout << "find " << with_val.find(key) << std::endl;
-                        if (with_val.find(key) != with_val.end()) // huh?
-                        {
-                            std::cout << "found " << m_opt_map[key] << std::endl;
-                        }
-                    }
-
-                }
-
-                
-
-
             }
         }
+
+        if ((argument[0] == '-') && !(match_found))
+        {
+            bool have_value = false;
+        // auto trigger_char = remove_character(opt.short_flag(), '-');
+            for (int i = 1; i < argument.size(); ++i)
+            {
+                bool valid_flag = false;
+                std::string key(1, argument[i]);
+                std::cout << "key = " << key << std::endl;
+                bool value_flag = (with_val.count(key) > 0);
+                if (value_flag)
+                {
+                    auto crit_pos = argument.find(key);
+                    if (argument.size() > (crit_pos + 1))
+                    {
+                        if (m_options[m_opt_map[key]])
+                        {
+                            /* code */
+                        }
+                        m_options[m_opt_map[key]].value.argument.substr(i + 1)
+                    }
+                    // if (m_options[m_opt_map[key]].)
+                    // {
+                    //     /* code */
+                    // }
+
+                    std::cout << "found " << m_opt_map[key] << std::endl;
+                    std::cout << "value " << argument.substr(i + 1) << std::endl;
+                }
+                // if (/* condition */)
+                // {
+                //     /* code */
+                // }
+            }
+        }
+
     }
 }
 

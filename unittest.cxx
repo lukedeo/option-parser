@@ -39,6 +39,8 @@ int main(int argc, char const *argv[])
     p.add_option("--help", "-h", optionparser::store_true);
     p.add_option("--file", "-f", optionparser::store_mult_values);
     p.add_option("--save", "-s", optionparser::store_value);
+    p.add_option("--print", "-p", optionparser::store_value);
+    p.add_option("--nom", "-n", optionparser::store_true);
 
     p.eat_arguments(argc, argv);
 
