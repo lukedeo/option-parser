@@ -32,10 +32,15 @@ int main(int argc, char const *argv[])
 
     p.eat_arguments(argc, argv);
 
+    if(p.get_value("help"))
+    {
+        std::cout << "help passed!" << std::endl;
+    }
+
 
     double lrn = p.get_value<double>("save");
 
-    std::cout << "retrieved value for save is " << lrn << std::endl;
+    std::cout << "retrieved value for 2 * save is " << 2*lrn << std::endl;
 
 
     return 0;
