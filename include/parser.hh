@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <stdexcept>
 #include <stdlib.h>
+#include <unordered_set>
+
 
 namespace optionparser
 {
@@ -39,6 +41,7 @@ struct option
 inline std::string remove_character(std::string str, char c = ' ');
 
 typedef std::map<std::string, option> Archive;
+typedef std::map<std::string, std::string> Dictionary;
 
 class parser
 {
@@ -63,6 +66,8 @@ public:
 
     Archive m_options;
     std::string m_prog_name;
+    std::unordered_set<std::string> with_val, without_val;
+    Dictionary m_opt_map;
     // Dictionary m_long_flags, m_short_flags;
     // SwitchBox m_box;
 };
@@ -81,6 +86,15 @@ void parser::add_option(std::string longoption, std::string shortoption,
         m_options[dest].required() = true;
     }
     m_options[dest].mode() = mode;
+    if (mode != store_true)
+    {
+        with_val.insert(shortoption);
+    }
+    else
+    {
+        without_val.insert(shortoption);
+    }
+    m_opt_map[remove_character(shortoption, '-')] = dest;
 }
 
 void parser::eat_arguments(int argc, char const *argv[])
@@ -92,6 +106,7 @@ void parser::eat_arguments(int argc, char const *argv[])
         arguments.push_back(argv[i]);
     }
     // for each argument cluster
+    
     for (int arg = 0; arg < arguments.size(); ++arg)
     {
         auto argument = arguments[arg];
@@ -103,6 +118,10 @@ void parser::eat_arguments(int argc, char const *argv[])
 
             if ((argument[0] == '-'))
             {
+                if (argument.size() == 1)
+                {
+                    error("A flag needs a letter...");
+                }
                 if (argument[1] == '-')
                 {
                     if (argument.find(opt.long_flag()) != std::string::npos)
@@ -155,7 +174,6 @@ void parser::eat_arguments(int argc, char const *argv[])
                                     }
                                 }
                                 option.second.found() = true;
-                                std::cout << "value = " << option.second.value[0] << std::endl;
                             }
                             else
                             {
@@ -181,7 +199,6 @@ void parser::eat_arguments(int argc, char const *argv[])
                             option.second.value.clear();
                             option.second.value.push_back(next_arg);
                             option.second.found() = true;
-                            std::cout << "value = " << option.second.value[0] << std::endl;
                         }
                         if ((opt.mode() == store_mult_values) && (option.second.found() == false))
                         {
@@ -211,22 +228,30 @@ void parser::eat_arguments(int argc, char const *argv[])
                         }
                     }
                 }
+                else
+                {
 
-                // if (argument.find(opt.short_flag()) != std::string::npos)
-                // {
-                //     if (/* condition */)
-                //     {
-                //         /* code */
-                //     }
-                // }
+                    auto trigger_char = remove_character(opt.short_flag(), '-');
+                    std::cout << "here..." << trigger_char<< std::endl;
+                    for (auto &each : argument)
+                    {
+                        std::string key(1, each);
+                        std::cout << "find " << with_val.find(key) << std::endl;
+                        if (with_val.find(key) != with_val.end()) // huh?
+                        {
+                            std::cout << "found " << m_opt_map[key] << std::endl;
+                        }
+                    }
 
+                }
+
+                
 
 
             }
         }
     }
 }
-
 
 void parser::error(const std::string &e)
 {
