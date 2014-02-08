@@ -33,5 +33,10 @@ int main(int argc, char const *argv[])
     p.eat_arguments(argc, argv);
 
 
+    double lrn = p.get_value<double>("save");
+
+    std::cout << "retrieved value for save is " << lrn << std::endl;
+
+
     return 0;
 }

@@ -38,14 +38,7 @@ struct option
 
 inline std::string remove_character(std::string str, char c = ' ');
 
-// typedef std::map<std::string, std::map<std::string, std::vector<std::string>>> Archive;
-
-// typedef std::map<std::string, bool> SwitchBox;
-
-// typedef std::map<std::string, std::map<std::string, std::string>> Dictionary;
-
 typedef std::map<std::string, option> Archive;
-
 
 class parser
 {
@@ -58,8 +51,8 @@ public:
     void add_option(std::string longoption, std::string shortoption, storage_mode mode, bool required = false, std::string dest = "");
     // void add_option(std::string shortoption, storage_mode mode, std::string key = "", bool required = false);
 
-    // template <class T>
-    // T get_value(std::string key);
+    template <class T = bool>
+    T get_value(std::string key);
 
 // private:
 
@@ -192,6 +185,43 @@ void parser::error(const std::string &e)
 // {
 
 // }
+
+template <class T>
+T parser::get_value(std::string key)
+{
+    return m_options[key].found();
+}
+
+
+template <>
+std::string parser::get_value<std::string>(std::string key)
+{
+    return m_options[key].value[0];
+}
+
+template <>
+double parser::get_value<double>(std::string key)
+{
+    return std::stod(m_options[key].value[0]);
+}
+
+template <>
+float parser::get_value<float>(std::string key)
+{
+    return std::stof(m_options[key].value[0]);
+}
+
+template <>
+int parser::get_value<int>(std::string key)
+{
+    return std::stoi(m_options[key].value[0]);
+}
+
+template <>
+unsigned int parser::get_value<unsigned int>(std::string key)
+{
+    return std::stoul(m_options[key].value[0]);
+}
 
 
 
