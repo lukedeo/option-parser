@@ -28,7 +28,7 @@ public:
 	parser() = default;
 	~parser()= default;
 
-	// void eat_arguments(int argc, char const *argv[]);
+	void eat_arguments(int argc, char const *argv[]);
 
 	void add_option(std::string longoption, std::string shortoption, storage_mode mode, bool required = false, std::string key = "");
 	// void add_option(std::string shortoption, storage_mode mode, std::string key = "", bool required = false);
@@ -55,6 +55,26 @@ void parser::add_option(std::string longoption, std::string shortoption,
 	}
 	m_long_flags[req_string][key] = longoption;
 	m_short_flags[req_string][key] = shortoption;
+}
+
+void parser::eat_arguments(int argc, char const *argv[])
+{
+	std::vector<std::string> arguments;
+	for (int i = 1; i < argc; ++i)
+	{
+		arguments.push_back(argv[i]);
+	}
+
+	for (auto &entry : m_long_flags["optional"])
+	{
+		for (auto &arg : arguments)
+		{
+			if (arg == entry.second)
+			{
+				std::cout << "!!Found flag " << entry.second << " with key " << entry.first << std::endl;
+			}
+		}
+	}
 }
 
 
