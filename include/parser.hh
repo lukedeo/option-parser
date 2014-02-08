@@ -139,6 +139,20 @@ void parser::eat_arguments(int argc, char const *argv[])
                                 else
                                 {
                                     option.second.value.push_back(val);
+                                    if (++arg < arguments.size())
+                                    {
+                                        auto next_arg = arguments[arg];
+                                        while (next_arg[0] != '-')
+                                        {
+                                            option.second.value.push_back(next_arg);
+                                            if (++arg >= arguments.size())
+                                            {
+                                                break;
+                                            }
+                                            next_arg = arguments[arg];
+                                        }
+                                        arg--;
+                                    }
                                 }
                                 option.second.found() = true;
                                 std::cout << "value = " << option.second.value[0] << std::endl;
@@ -197,6 +211,16 @@ void parser::eat_arguments(int argc, char const *argv[])
                         }
                     }
                 }
+
+                // if (argument.find(opt.short_flag()) != std::string::npos)
+                // {
+                //     if (/* condition */)
+                //     {
+                //         /* code */
+                //     }
+                // }
+
+
 
             }
         }
