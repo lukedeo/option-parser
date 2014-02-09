@@ -30,6 +30,10 @@ int main(int argc, char const *argv[])
     p.add_option("-h")  .help("Display this message then exit.")
                         .dest("help");
 
+
+    p.add_option("--now", "-n") .help("NOWWWW");
+
+
     p.add_option("-file")   .help("pass a list of files to load.")
                             .mode(optionparser::store_mult_values)
                             .required(false);
@@ -44,7 +48,12 @@ int main(int argc, char const *argv[])
 
     if(p.get_value("help"))
     {
-        std::cout << "help passed!" << std::endl;
+        std::cout << "help passed!";
+        if (p.get_value("now"))
+        {
+            std::cout << "...now!";
+        }
+        std::cout << "" << std::endl;
     }
 
     // std::cout << "retrieved value for 2 * save is " << 2*lrn << std::endl;

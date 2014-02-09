@@ -1,4 +1,4 @@
-#cmd_parser, a lightweight header-only option parser
+#`cmd_parser`, a lightweight header-only option parser
 
 
 

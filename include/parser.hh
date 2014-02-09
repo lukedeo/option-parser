@@ -16,49 +16,47 @@ namespace optionparser
 {
 //----------------------------------------------------------------------------
 enum storage_mode { store_true, store_value, store_mult_values };
-
+//----------------------------------------------------------------------------
 struct dict_entry
 {
     unsigned int pos;
     std::string name;
 };
-
+//----------------------------------------------------------------------------
 struct option
 {
     option(){}
-    bool &found() {return m_found;}
-    bool m_found = false;
-
+    bool &found() 
+    {
+        return m_found;
+    }
 
     option &required(bool req) 
     {
         m_required = req;
         return *this;
     }
-    bool &required() {return m_required;}
+    bool &required() 
+    {
+        return m_required;
+    }
 
-    bool m_required = false;
-
-    // std::vector<std::string> value;
-
-    std::string &short_flag() {return m_short_flag;}
+    std::string &short_flag() 
+    {
+        return m_short_flag;
+    }
     
-    // option &short_flag(const std::string &short_flag) 
-    // {
-    //     m_short_flag = short_flag;
-    //     return *this;
-    // }
-
-    std::string &long_flag() {return m_long_flag;}
+    std::string &long_flag() 
+    {
+        return m_long_flag;
+    }
     
-    // std::string &long_flag(const std::string &long_flag)
-    // {
-    //     m_long_flag = long_flag;
-    //     return *this;
-    // }
     std::string m_short_flag = "", m_long_flag = "";
 
-    storage_mode &mode() {return m_mode;}
+    storage_mode &mode() 
+    {
+        return m_mode;
+    }
     
     option &mode(const storage_mode &mode)
     {
@@ -66,33 +64,43 @@ struct option
         return *this;
     }
 
-    storage_mode m_mode = store_true;
-
-
-    std::string &help() {return m_help;}
+    std::string &help() 
+    {
+        return m_help;
+    }
     
     option &help(const std::string &help)
     {
         m_help = help;
         return *this;
     }
-    std::string m_help = "";
 
-    std::string &dest() {return m_dest;}
+    std::string &dest() 
+    {
+        return m_dest;
+    }
     
     option &dest(const std::string &dest)
     {
         m_dest = dest;
         return *this;
     }
+
+    bool m_found = false;
+    bool m_required = false;
+    storage_mode m_mode = store_true;
+    std::string m_help = "";
     std::string m_dest = "";
 };
-
+//----------------------------------------------------------------------------
 inline std::string remove_character(std::string str, char c = ' ');
 
 typedef std::map<std::string, std::vector<std::string>> Archive;
 typedef std::map<std::string, dict_entry> Dictionary;
 
+//-----------------------------------------------------------------------------
+//  Parser Class
+//-----------------------------------------------------------------------------
 class parser
 {
 public:
@@ -101,49 +109,26 @@ public:
 
     void eat_arguments(int argc, char const *argv[]);
 
-    void add_option(std::string longoption, std::string shortoption, 
-        storage_mode mode, bool required = false, std::string help = "", std::string dest = "");
-
     option &add_option(std::string longoption, std::string shortoption);
     option &add_option(std::string opt);
-
-
-    option &add_option_internal(std::string longoption, std::string shortoption);
-
-
-    // void add_option(std::string longoption, 
-    //     storage_mode mode, bool required = false, std::string help = "", std::string dest = "");
-    // void add_option(option &o);
-
-    // void add_option(const option &o);
-
-
-
-    // void add_option(std::string shortoption, storage_mode mode, std::string key = "", bool required = false);
 
     template <class T = bool>
     T get_value(std::string key);
 
-// private:
+private:
+     option &add_option_internal(std::string longoption, 
+        std::string shortoption);
 
     // void help();
 
-
-
-    // void chomp_short_argument(std::string argument);
     void error(const std::string &e);
 
     Archive m_values;
-
     std::vector<option> m_options;
-
     std::string m_prog_name;
     std::unordered_set<std::string> with_val, without_val;
     Dictionary m_opt_map;
-
     std::map<std::string, unsigned int> idx;
-    // Dictionary m_long_flags, m_short_flags;
-    // SwitchBox m_box;
 };
 //----------------------------------------------------------------------------
 option &parser::add_option(std::string longoption, std::string shortoption)
@@ -172,12 +157,12 @@ option &parser::add_option(std::string opt)
     // return add_option_internal(opt, "");
 }
 //----------------------------------------------------------------------------
-option &parser::add_option_internal(std::string longoption, std::string shortoption)
+option &parser::add_option_internal(std::string longoption, 
+    std::string shortoption)
 {
     m_options.resize(m_options.size() + 1);
 
     option &opt = m_options.back();
-
 
     if (longoption != "")
     {
@@ -196,15 +181,12 @@ option &parser::add_option_internal(std::string longoption, std::string shortopt
 
     opt.long_flag() = longoption;
     opt.short_flag() = shortoption;
-    // std::cout << "adding the sort option " << opt.short_flag() << std::endl;
     auto k = remove_character(shortoption, '-');
     m_opt_map[k].pos = m_options.size() - 1;
     m_opt_map[k].name = opt.m_dest;
     return opt;
 }
 //----------------------------------------------------------------------------
-
-
 void parser::eat_arguments(int argc, char const *argv[])
 {
     unsigned int idx_ctr = 0;
@@ -213,15 +195,16 @@ void parser::eat_arguments(int argc, char const *argv[])
         idx[opt.m_dest] = idx_ctr;
         if (opt.short_flag() != "")
         { 
+            auto shortflag = opt.short_flag();
             if (opt.mode() != store_true)
             {
-                with_val.insert(remove_character(opt.short_flag(), '-'));
+                with_val.insert(remove_character(shortflag, '-'));
             }
             else
             {
-                without_val.insert(remove_character(opt.short_flag(), '-'));
+                without_val.insert(remove_character(shortflag, '-'));
             }
-            m_opt_map[remove_character(opt.short_flag(), '-')].name = opt.dest();
+            m_opt_map[remove_character(shortflag, '-')].name = opt.dest();
         }
         ++idx_ctr;
     }
@@ -231,6 +214,7 @@ void parser::eat_arguments(int argc, char const *argv[])
     {
         arguments.push_back(argv[i]);
     }
+
     // for each argument cluster
     
     for (int arg = 0; arg < arguments.size(); ++arg)
@@ -254,8 +238,6 @@ void parser::eat_arguments(int argc, char const *argv[])
                 {
                     error("A flag needs a letter...");
                 }
-                // if (argument[0] == '-')
-                // {
                 if (argument.find(opt.long_flag()) == 0)
                 {
                     if (opt.mode() == store_true)
@@ -270,19 +252,19 @@ void parser::eat_arguments(int argc, char const *argv[])
                         option.found() = false;
                         if (opt.mode() != store_true)
                         {
-                            auto search_point = argument.find_first_of('=');
-                            if (search_point == std::string::npos)
+                            auto search_pt = argument.find_first_of('=');
+                            if (search_pt == std::string::npos)
                             {
                                 std::string e = "Error, long options (";
                                 e += opt.long_flag();
-                                e += ") require a '=' or space before a value.";
+                                e +=") require a '=' or space before a value.";
                                 error(e);
                             }
-                            std::string val = argument.substr(search_point + 1);
+                            std::string val = argument.substr(search_pt + 1);
                             if (val == "")
                             {
-                                std::string e = "Error, argument needed after '='.";
-                                error(e);
+                                std::string e = "Error, argument needed";
+                                error(e + " after '='.");
                             }
                             if (opt.mode() == store_value)
                             {
@@ -297,7 +279,9 @@ void parser::eat_arguments(int argc, char const *argv[])
                                     auto next_arg = arguments[arg];
                                     while (next_arg[0] != '-')
                                     {
-                                        m_values[opt.dest()].push_back(next_arg);
+                                        m_values[opt.dest()].push_back(
+                                            next_arg);
+
                                         if (++arg >= arguments.size())
                                         {
                                             break;
@@ -319,17 +303,20 @@ void parser::eat_arguments(int argc, char const *argv[])
                         }              
                     }
 
-                    if ((opt.mode() == store_value) && (option.found() == false))
+                    if ((opt.mode() == store_value) && 
+                        (option.found() == false))
                     {
                         if (++arg >= arguments.size())
                         {
-                            std::string e("error, flag '" + opt.long_flag() + "' requires an argument.");
+                            std::string e("error, flag '" + 
+                                opt.long_flag() + "' requires an argument.");
                             error(e);
                         }
                         auto next_arg = arguments[arg];
                         if (next_arg[0] == '-')
                         {
-                            std::string e("error, flag '" + opt.long_flag() + "' requires an argument.");
+                            std::string e("error, flag '" + 
+                                opt.long_flag() + "' requires an argument.");
                             error(e);
                         }
                         m_values[opt.dest()].clear();
@@ -338,17 +325,20 @@ void parser::eat_arguments(int argc, char const *argv[])
                         match_found = true;
                         break;
                     }
-                    if ((opt.mode() == store_mult_values) && (option.found() == false))
+                    if ((opt.mode() == store_mult_values) && 
+                        (option.found() == false))
                     {
                         if (++arg >= arguments.size())
                         {
-                            std::string e("error, flag '" + opt.long_flag() + "' requires at least one argument.");
+                            std::string e("error, flag '" + opt.long_flag() 
+                                + "' requires at least one argument.");
                             error(e);
                         }
                         auto next_arg = arguments[arg];
                         if (next_arg[0] == '-')
                         {
-                            std::string e("error, flag '" + opt.long_flag() + "' requires at least one argument.");
+                            std::string e("error, flag '" + opt.long_flag() 
+                                + "' requires at least one argument.");
                             error(e);
                         }
                         while (next_arg[0] != '-')
@@ -367,16 +357,7 @@ void parser::eat_arguments(int argc, char const *argv[])
                         break;
                     }
                 }
-                // }
             }
-            // if (match_found)
-            // {
-            //     break;
-            // }
-        }
-        if (match_found)
-        {
-            std::cout << "!match yet..." << std::endl;
         }
         if ((argument[0] == '-') && 
             !(match_found) &&
@@ -394,23 +375,29 @@ void parser::eat_arguments(int argc, char const *argv[])
                     auto crit_pos = argument.find(key);
                     if (argument.size() > (crit_pos + 1))
                     {
-                        if (m_options[m_opt_map[key].pos].mode() == store_value)
+                        if(m_options[m_opt_map[key].pos].mode() == store_value)
                         {
                             m_values[m_opt_map[key].name].clear();
-                            m_values[m_opt_map[key].name].push_back(argument.substr(i + 1));
+                            m_values[m_opt_map[key].name].push_back(
+                                argument.substr(i + 1));
+
                             m_options[m_opt_map[key].pos].found() = true;
                             break;
                         }
                         else
                         {
-                            m_values[m_opt_map[key].name].push_back(argument.substr(i + 1));
+                            m_values[m_opt_map[key].name].push_back(
+                                argument.substr(i + 1));
+
                             m_options[m_opt_map[key].pos].found() = true;
                             if (++arg < arguments.size())
                             {
                                 auto next_arg = arguments[arg];
                                 while (next_arg[0] != '-')
                                 {
-                                    m_values[m_opt_map[key].name].push_back(next_arg);
+                                    m_values[m_opt_map[key].name].push_back(
+                                        next_arg);
+
                                     if (++arg >= arguments.size())
                                     {
                                         break;
@@ -419,7 +406,6 @@ void parser::eat_arguments(int argc, char const *argv[])
                                 }
                                 arg--;
                             }
-                            
                             break;
                         }
                     }
@@ -427,16 +413,19 @@ void parser::eat_arguments(int argc, char const *argv[])
                     {
                         if (++arg >= arguments.size())
                         {
-                            std::string e("error, flag '-" + key + "' requires at least one argument.");
+                            std::string e("error, flag '-" + key + 
+                                "' requires at least one argument.");
                             error(e);
                         }
                         auto next_arg = arguments[arg];
                         if (next_arg[0] == '-')
                         {
-                            std::string e("error, flag '-" + key + "' requires an argument.");
+                            std::string e("error, flag '-" + key + 
+                                "' requires an argument.");
                             error(e);
                         }
-                        if (m_options[m_opt_map[key].pos].mode() == store_value)
+                        if (m_options[m_opt_map[key].pos].mode() 
+                            == store_value)
                         {
                             m_values[m_opt_map[key].name].clear();
                             m_values[m_opt_map[key].name].push_back(next_arg);
@@ -447,7 +436,8 @@ void parser::eat_arguments(int argc, char const *argv[])
                             while (next_arg[0] != '-')
                             {
 
-                                m_values[m_opt_map[key].name].push_back(next_arg);
+                                m_values[m_opt_map[key].name].push_back(
+                                    next_arg);
                                 if (++arg >= arguments.size())
                                 {
                                     break;
@@ -459,12 +449,6 @@ void parser::eat_arguments(int argc, char const *argv[])
                         }
 
                     }
-                    // if (m_options[m_opt_map[key].pos].)
-                    // {
-                    //     /* code */
-                    // }
-
-                    // std::cout << "value " << argument.substr(i + 1) << std::endl;
                     break;
                 }
 
@@ -507,10 +491,11 @@ void parser::eat_arguments(int argc, char const *argv[])
         error(e + ".");
     }
 }
-
+//----------------------------------------------------------------------------
 void parser::error(const std::string &e)
 {
-    std::cerr << "In excecutable \'" << m_prog_name << "\':\n" << e << std::endl;
+    std::cerr << "In excecutable \'";
+    std::cerr << m_prog_name << "\':\n" << e << std::endl;
     exit(1);
 }
 
@@ -526,11 +511,7 @@ void parser::error(const std::string &e)
 //     }
 // }
 
-// void parser::chomp_short_argument(std::string argument)
-// {
-
-// }
-
+//----------------------------------------------------------------------------
 template <class T>
 T parser::get_value(std::string key)
 {
@@ -546,8 +527,7 @@ T parser::get_value(std::string key)
         throw std::out_of_range(e);
     }  
 }
-
-
+//----------------------------------------------------------------------------
 template <>
 std::string parser::get_value<std::string>(std::string key)
 {
@@ -563,7 +543,7 @@ std::string parser::get_value<std::string>(std::string key)
         throw std::out_of_range(e);
     }  
 }
-
+//----------------------------------------------------------------------------
 template <>
 double parser::get_value<double>(std::string key)
 {
@@ -579,7 +559,7 @@ double parser::get_value<double>(std::string key)
         throw std::out_of_range(e);
     }  
 }
-
+//----------------------------------------------------------------------------
 template <>
 float parser::get_value<float>(std::string key)
 {
@@ -595,7 +575,7 @@ float parser::get_value<float>(std::string key)
         throw std::out_of_range(e);
     }  
 }
-
+//----------------------------------------------------------------------------
 template <>
 int parser::get_value<int>(std::string key)
 {
@@ -611,7 +591,7 @@ int parser::get_value<int>(std::string key)
         throw std::out_of_range(e);
     }  
 }
-
+//----------------------------------------------------------------------------
 template <>
 unsigned int parser::get_value<unsigned int>(std::string key)
 {
@@ -627,9 +607,10 @@ unsigned int parser::get_value<unsigned int>(std::string key)
         throw std::out_of_range(e);
     }  
 }
-
+//----------------------------------------------------------------------------
 template <>
-std::vector<std::string> parser::get_value<std::vector<std::string>>(std::string key)
+std::vector<std::string> parser::get_value<std::vector<std::string>>(
+    std::string key)
 {
     try
     {
@@ -643,16 +624,7 @@ std::vector<std::string> parser::get_value<std::vector<std::string>>(std::string
         throw std::out_of_range(e);
     }  
 }
-
-
-
-
-
-
-
-
-
-
+//----------------------------------------------------------------------------
 inline std::string remove_character(std::string str, const char c)
 {
     std::string::iterator end_pos = std::remove(str.begin(), str.end(), c);
@@ -660,8 +632,6 @@ inline std::string remove_character(std::string str, const char c)
     return str;
 }
 
-
-
-}
+} // end namespace
 
 #endif
