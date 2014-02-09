@@ -51,9 +51,6 @@ int main(int argc, char const *argv[])
         std::cout << "help passed!" << std::endl;
     }
 
-
-    // double lrn = p.get_value<double>("save");
-
     // std::cout << "retrieved value for 2 * save is " << 2*lrn << std::endl;
 
     if (p.get_value("file"))
