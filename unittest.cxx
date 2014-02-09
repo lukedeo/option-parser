@@ -36,13 +36,22 @@ int main(int argc, char const *argv[])
 {
     optionparser::parser p;
 
-    p.add_option("--help", "-h", optionparser::store_true);
-    p.add_option("--file", "-f", optionparser::store_mult_values);
-    p.add_option("--save", "-s", optionparser::store_value);
-    p.add_option("--print", "-p", optionparser::store_value);
-    p.add_option("--nom", "-n", optionparser::store_true);
+    p.add_option("--help", "-h", optionparser::store_true, false, "Display this message then exit.");
+    p.add_option("--file", "-f", optionparser::store_mult_values, false, "pass a list of files to load.");
+    p.add_option("--save", "-s", optionparser::store_value, false, "do the save thing");
+    p.add_option("--print", "-p", optionparser::store_value, false, "do the print thing");
+    p.add_option("--nom", "-n", optionparser::store_true, false, "do the nom thing");
+
+    p.add_option({.long_flag() = "--eat",
+                 .short_flag() = "-e", 
+                 .mode() = optionparser::store_value, 
+                 .required() = true, 
+                 .help() = "eat som food!"});
+
+
 
     p.eat_arguments(argc, argv);
+    p.help();
 
     if(p.get_value("help"))
     {
@@ -58,13 +67,26 @@ int main(int argc, char const *argv[])
     {
         auto names = p.get_value<std::vector<std::string>>("file");
 
+        std::cout << "Filenames" << std::endl;
+
         for (int i = 0; i < names.size(); ++i)
         {
             std::cout << "element " << i << ": " << names[i] << std::endl;
         }
 
         // std::cout << names << std::endl;
+    }
 
+    if (p.get_value("save"))
+    {
+        auto names = p.get_value<std::vector<std::string>>("save");
+
+        std::cout << "Savenames" << std::endl;
+
+        for (int i = 0; i < names.size(); ++i)
+        {
+            std::cout << "element " << i << ": " << names[i] << std::endl;
+        }
     }
     
 

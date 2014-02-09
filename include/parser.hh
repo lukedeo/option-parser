@@ -3,6 +3,7 @@
 
 #include <map>
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -13,15 +14,12 @@
 
 namespace optionparser
 {
-
+//----------------------------------------------------------------------------
 enum storage_mode { store_true, store_value, store_mult_values };
 
 struct option
 {
-    option()
-    : value(0)
-    {
-    }
+    option() : value(0) {}
     bool &found() {return m_found;}
     bool m_found = false;
 
@@ -35,7 +33,14 @@ struct option
     std::string m_short_flag = "", m_long_flag = "";
 
     storage_mode &mode() {return m_mode;};
-    storage_mode m_mode;
+    storage_mode m_mode = store_true;
+
+
+    std::string &help() {return m_help;};
+    std::string m_help = "";
+
+    std::string &dest() {return m_dest;};
+    std::string m_dest = "";
 };
 
 inline std::string remove_character(std::string str, char c = ' ');
@@ -51,13 +56,22 @@ public:
 
     void eat_arguments(int argc, char const *argv[]);
 
-    void add_option(std::string longoption, std::string shortoption, storage_mode mode, bool required = false, std::string dest = "");
+    void add_option(std::string longoption, std::string shortoption, 
+        storage_mode mode, bool required = false, std::string help = "", std::string dest = "");
+    // void add_option(option &o);
+
+    // void add_option(const option &o);
+
+
+
     // void add_option(std::string shortoption, storage_mode mode, std::string key = "", bool required = false);
 
     template <class T = bool>
     T get_value(std::string key);
 
 // private:
+
+    void help();
 
 
 
@@ -71,9 +85,9 @@ public:
     // Dictionary m_long_flags, m_short_flags;
     // SwitchBox m_box;
 };
-
+//----------------------------------------------------------------------------
 void parser::add_option(std::string longoption, std::string shortoption, 
-    storage_mode mode, bool required, std::string dest)
+    storage_mode mode, bool required, std::string help, std::string dest)
 {
     if (dest == "")
     {
@@ -81,6 +95,8 @@ void parser::add_option(std::string longoption, std::string shortoption,
     }
     m_options[dest].short_flag() = shortoption;
     m_options[dest].long_flag() = longoption;
+    m_options[dest].help() = help;
+    m_options[dest].dest() = dest;
     if (required)
     {
         m_options[dest].required() = true;
@@ -96,6 +112,23 @@ void parser::add_option(std::string longoption, std::string shortoption,
     }
     m_opt_map[remove_character(shortoption, '-')] = dest;
 }
+// void parser::add_option(option &o)
+// {
+//     if (o.dest() == "")
+//     {
+//         o.dest() = remove_character(o.long_flag(), '-');
+//     }
+//     if (o.mode() != store_true)
+//     {
+//         with_val.insert(remove_character(o.short_flag(), '-'));
+//     }
+//     else
+//     {
+//         without_val.insert(remove_character(o.short_flag(), '-'));
+//     }
+//     m_options[o.dest()] = o;
+//     m_opt_map[remove_character(o.short_flag(), '-')] = o.dest();
+// }
 
 void parser::eat_arguments(int argc, char const *argv[])
 {
@@ -109,6 +142,7 @@ void parser::eat_arguments(int argc, char const *argv[])
     
     for (int arg = 0; arg < arguments.size(); ++arg)
     {
+        // std::cout << "condsidering: " << arguments[arg] << std::endl;
         auto argument = arguments[arg];
         bool match_found = false;
 
@@ -242,37 +276,105 @@ void parser::eat_arguments(int argc, char const *argv[])
         if ((argument[0] == '-') && !(match_found))
         {
             bool have_value = false;
-        // auto trigger_char = remove_character(opt.short_flag(), '-');
             for (int i = 1; i < argument.size(); ++i)
             {
                 bool valid_flag = false;
                 std::string key(1, argument[i]);
-                std::cout << "key = " << key << std::endl;
                 bool value_flag = (with_val.count(key) > 0);
                 if (value_flag)
                 {
                     auto crit_pos = argument.find(key);
                     if (argument.size() > (crit_pos + 1))
                     {
-                        if (m_options[m_opt_map[key]])
+                        if (m_options[m_opt_map[key]].mode() == store_value)
                         {
-                            /* code */
+                            m_options[m_opt_map[key]].value.clear();
+                            m_options[m_opt_map[key]].value.push_back(argument.substr(i + 1));
+                            m_options[m_opt_map[key]].found() = true;
+                            break;
                         }
-                        m_options[m_opt_map[key]].value.argument.substr(i + 1)
+                        else
+                        {
+                            m_options[m_opt_map[key]].value.push_back(argument.substr(i + 1));
+                            m_options[m_opt_map[key]].found() = true;
+                            if (++arg < arguments.size())
+                            {
+                                auto next_arg = arguments[arg];
+                                while (next_arg[0] != '-')
+                                {
+                                    m_options[m_opt_map[key]].value.push_back(next_arg);
+                                    if (++arg >= arguments.size())
+                                    {
+                                        break;
+                                    }
+                                    next_arg = arguments[arg];
+                                }
+                                arg--;
+                            }
+                            
+                            break;
+                        }
+                    }
+                    else // case where theres a space until the next args.
+                    {
+                        if (++arg >= arguments.size())
+                        {
+                            std::string e("error, flag '-" + key + "' requires at least one argument.");
+                            error(e);
+                        }
+                        auto next_arg = arguments[arg];
+                        if (next_arg[0] == '-')
+                        {
+                            std::string e("error, flag '-" + key + "' requires an argument.");
+                            error(e);
+                        }
+                        if (m_options[m_opt_map[key]].mode() == store_value)
+                        {
+                            m_options[m_opt_map[key]].value.clear();
+                            m_options[m_opt_map[key]].value.push_back(next_arg);
+                            m_options[m_opt_map[key]].found() = true;
+                        }
+                        else
+                        {
+                            while (next_arg[0] != '-')
+                            {
+
+                                m_options[m_opt_map[key]].value.push_back(next_arg);
+                                if (++arg >= arguments.size())
+                                {
+                                    break;
+                                }
+                                next_arg = arguments[arg];
+                            }
+                            m_options[m_opt_map[key]].found() = true;
+                            arg--;
+                        }
+
                     }
                     // if (m_options[m_opt_map[key]].)
                     // {
                     //     /* code */
                     // }
 
-                    std::cout << "found " << m_opt_map[key] << std::endl;
-                    std::cout << "value " << argument.substr(i + 1) << std::endl;
+                    // std::cout << "found " << m_opt_map[key] << std::endl;
+                    // std::cout << "value " << argument.substr(i + 1) << std::endl;
+                    break;
                 }
-                // if (/* condition */)
-                // {
-                //     /* code */
-                // }
+
+                bool bool_flag = (without_val.count(key) > 0);
+                if (bool_flag)
+                {
+                    m_options[m_opt_map[key]].found() = true;
+                }
+                else
+                {
+                    error("Invalid flag '-" + key + "'");
+                }
             }
+        }
+        else
+        {
+            error("Unrecognized flag/option '" + argument + "'");
         }
 
     }
@@ -282,6 +384,18 @@ void parser::error(const std::string &e)
 {
     std::cerr << "In excecutable \'" << m_prog_name << "\':\n" << e << std::endl;
     exit(1);
+}
+
+void parser::help()
+{
+    auto split = m_prog_name.find_last_of('/');
+    std::string stripped_name = m_prog_name.substr(split + 1);
+    std::cout << "usage: " << stripped_name << " [options]\n" << std::endl;
+    for (auto &option : m_options)
+    {
+        auto opt = option.second;
+        std::cout << "  " << opt.long_flag() << ", " << opt.short_flag() << std::setw(24) << opt.help() << std::endl;
+    }
 }
 
 // void parser::chomp_short_argument(std::string argument)
