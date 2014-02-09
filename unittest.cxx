@@ -27,16 +27,16 @@ int main(int argc, char const *argv[])
 {
     optionparser::parser p;
 
-    p.add_option("-h").help("Display this message then exit.")
-                                .dest("help");
+    p.add_option("-h")  .help("Display this message then exit.")
+                        .dest("help");
 
-    p.add_option("-file") .help("pass a list of files to load.")
-                                 .mode(optionparser::store_mult_values)
-                                 .required(false);
+    p.add_option("-file")   .help("pass a list of files to load.")
+                            .mode(optionparser::store_mult_values)
+                            .required(false);
 
     p.add_option("-save", "-s") .help("pass a file to save.")
-                                 .mode(optionparser::store_value)
-                                 .required(false);
+                                .mode(optionparser::store_value)
+                                .required(false);
 
 
     p.eat_arguments(argc, argv);
