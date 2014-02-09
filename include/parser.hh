@@ -58,6 +58,10 @@ public:
 
     void add_option(std::string longoption, std::string shortoption, 
         storage_mode mode, bool required = false, std::string help = "", std::string dest = "");
+
+
+    // void add_option(std::string longoption, 
+    //     storage_mode mode, bool required = false, std::string help = "", std::string dest = "");
     // void add_option(option &o);
 
     // void add_option(const option &o);
@@ -273,6 +277,11 @@ void parser::eat_arguments(int argc, char const *argv[])
             }
         }
 
+        if (match_found)
+        {
+            break;
+        }
+
         if ((argument[0] == '-') && !(match_found))
         {
             bool have_value = false;
@@ -394,7 +403,7 @@ void parser::help()
     for (auto &option : m_options)
     {
         auto opt = option.second;
-        std::cout << "  " << opt.long_flag() << ", " << opt.short_flag() << std::setw(24) << opt.help() << std::endl;
+        std::cout << "    " <<std::setw(2)<< opt.long_flag() << ", " << opt.short_flag() << std::left << std::setw(24) << opt.help() << std::endl;
     }
 }
 

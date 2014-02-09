@@ -36,18 +36,11 @@ int main(int argc, char const *argv[])
 {
     optionparser::parser p;
 
-    p.add_option("--help", "-h", optionparser::store_true, false, "Display this message then exit.");
+    p.add_option("", "-h", optionparser::store_true, false, "Display this message then exit.", "help");
     p.add_option("--file", "-f", optionparser::store_mult_values, false, "pass a list of files to load.");
     p.add_option("--save", "-s", optionparser::store_value, false, "do the save thing");
     p.add_option("--print", "-p", optionparser::store_value, false, "do the print thing");
     p.add_option("--nom", "-n", optionparser::store_true, false, "do the nom thing");
-
-    p.add_option({.long_flag() = "--eat",
-                 .short_flag() = "-e", 
-                 .mode() = optionparser::store_value, 
-                 .required() = true, 
-                 .help() = "eat som food!"});
-
 
 
     p.eat_arguments(argc, argv);
