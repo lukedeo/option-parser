@@ -48,13 +48,13 @@ int main(int argc, char const *argv[])
                                  .mode(optionparser::store_mult_values)
                                  .required(false);
 
+    p.add_option("--save", "-s") .help("pass a file to save.")
+                                 .mode(optionparser::store_value)
+                                 .required(true);
+
+
     p.eat_arguments(argc, argv);
     // p.help();
-
-    for (auto &entry : p.m_options)
-    {
-        std::cout << "name: " << entry.dest() << (entry.found() ? " found!": " not found!") << std::endl;
-    }
 
     if(p.get_value("help"))
     {
@@ -81,17 +81,17 @@ int main(int argc, char const *argv[])
         // std::cout << names << std::endl;
     }
 
-    // if (p.get_value("save"))
-    // {
-    //     auto names = p.get_value<std::vector<std::string>>("save");
+    if (p.get_value("save"))
+    {
+        auto names = p.get_value<std::vector<std::string>>("save");
 
-    //     std::cout << "Savenames" << std::endl;
+        std::cout << "Savenames" << std::endl;
 
-    //     for (int i = 0; i < names.size(); ++i)
-    //     {
-    //         std::cout << "element " << i << ": " << names[i] << std::endl;
-    //     }
-    // }
+        for (int i = 0; i < names.size(); ++i)
+        {
+            std::cout << "element " << i << ": " << names[i] << std::endl;
+        }
+    }
     
 
 

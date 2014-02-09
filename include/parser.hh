@@ -155,6 +155,7 @@ option &parser::add_option_internal(std::string longoption, std::string shortopt
     m_options.resize(m_options.size() + 1);
 
     option &opt = m_options.back();
+
     if (opt.m_dest == "")
     {
         opt.m_dest = remove_character(longoption, '-');   
@@ -333,7 +334,9 @@ void parser::eat_arguments(int argc, char const *argv[])
             //     break;
             // }
         }
-        if ((argument[0] == '-') && !(match_found))
+        if ((argument[0] == '-') && 
+            !(match_found) &&
+            (argument[1] != '-'))
         {
             bool have_value = false;
             for (int i = 1; i < argument.size(); ++i)
@@ -437,6 +440,26 @@ void parser::eat_arguments(int argc, char const *argv[])
             error("Unrecognized flag/option '" + argument + "'");
         }
 
+    }
+    std::vector<std::string> missing;
+    for (auto &opt : m_options)
+    {
+        
+        if ((opt.required()) && (!opt.found()))
+        {
+            missing.push_back(opt.dest());
+        }
+    }
+    if (missing.size() > 0)
+    {
+        std::string e = "Missing required flags: ";
+        e += missing.at(0);
+        for (int i = 1; i < missing.size(); ++i)
+        {
+            e += ", ";
+            e += missing.at(i);
+        }
+        error(e + ".");
     }
 }
 
