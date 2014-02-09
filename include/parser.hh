@@ -214,7 +214,7 @@ void parser::eat_arguments(int argc, char const *argv[])
                 {
                     error("A flag needs a letter...");
                 }
-                if (argument[1] == '-')
+                if (argument[0] == '-')
                 {
                     if (argument.find(opt.long_flag()) != std::string::npos)
                     {
