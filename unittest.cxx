@@ -25,7 +25,7 @@ std::ostream& operator << (std::ostream& o, const std::vector<T> &v)
 
 int main(int argc, char const *argv[])
 {
-    optionparser::parser p;
+    optionparser::parser p("A test to make sure that this option parser works");
 
 
     p.add_option("--now", "-n") .help("NOWWWW");

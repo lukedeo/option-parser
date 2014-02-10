@@ -123,8 +123,8 @@ typedef std::map<std::string, dict_entry> Dictionary;
 class parser
 {
 public:
-    parser(bool create_help = true) 
-    : m_options(0) 
+    parser(std::string description = "", bool create_help = true) 
+    : m_options(0), m_description(description)
     {
         if (create_help)
         {
@@ -155,7 +155,7 @@ private:
 
     Archive m_values;
     std::vector<option> m_options;
-    std::string m_prog_name;
+    std::string m_prog_name, m_description;
     std::unordered_set<std::string> with_val, without_val;
     Dictionary m_opt_map;
     std::map<std::string, unsigned int> idx;
@@ -561,6 +561,11 @@ void parser::help()
         }
     }
     std::cout << "[options]\n";
+
+    if (m_description != "")
+    {
+        std::cout << "\n" << m_description << "\n" << std::endl;
+    }
     for (auto &option : m_options)
     {
         option.help_doc();
