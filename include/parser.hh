@@ -536,7 +536,31 @@ void parser::help()
 {
     auto split = m_prog_name.find_last_of('/');
     std::string stripped_name = m_prog_name.substr(split + 1);
-    std::cout << "usage: " << stripped_name << " [options]" << std::endl;
+    std::cout << "usage: " << stripped_name << " [-h] ";
+    for (auto &option : m_options)
+    {
+        if (option.required())
+        {
+            if (option.short_flag() != "")
+            {
+                std::cout << option.short_flag();
+            }
+            else
+            {
+                std::cout << option.long_flag();
+            }
+            
+            if (option.mode() == store_value)
+            {
+                std::cout << " ARG ";
+            }
+            if (option.mode() == store_mult_values)
+            {
+                std::cout << " ARG1 [ARG2 ...] ";
+            }
+        }
+    }
+    std::cout << "[options]\n";
     for (auto &option : m_options)
     {
         option.help_doc();

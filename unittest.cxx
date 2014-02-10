@@ -33,11 +33,11 @@ int main(int argc, char const *argv[])
 
     p.add_option("-file")   .help("pass a list of files to load.")
                             .mode(optionparser::store_mult_values)
-                            .required(false);
+                            .required(true);
 
     p.add_option("-save", "-s") .help("pass a file to save.")
                                 .mode(optionparser::store_value)
-                                .required(false);
+                                .required(true);
     
     p.eat_arguments(argc, argv);
 
