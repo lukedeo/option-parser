@@ -26,6 +26,25 @@ struct dict_entry
 struct option
 {
     option(){}
+    void help_doc()
+    {
+        std::string h = "    ";
+        if (m_long_flag != "")
+        {
+            h += m_long_flag;
+            if (m_short_flag != "")
+            {
+                h += ", ";
+            }
+        }
+        if (m_short_flag != "")
+        {
+            h+= m_short_flag;
+        }
+
+        printf("%-19s%s\n", h.c_str(), m_help.c_str());
+    }
+
     bool &found() 
     {
         return m_found;
@@ -104,7 +123,16 @@ typedef std::map<std::string, dict_entry> Dictionary;
 class parser
 {
 public:
-    parser(): m_options(0) {}
+    parser(bool create_help = true) 
+    : m_options(0) 
+    {
+        if (create_help)
+        {
+            add_option("--help", "-h")
+            .help("Display this help message and exit.");
+        }
+    }
+
     ~parser() = default;
 
     void eat_arguments(int argc, char const *argv[]);
@@ -115,11 +143,13 @@ public:
     template <class T = bool>
     T get_value(std::string key);
 
+    void help();
+
 private:
      option &add_option_internal(std::string longoption, 
         std::string shortoption);
 
-    // void help();
+    
 
     void error(const std::string &e);
 
@@ -154,7 +184,7 @@ option &parser::add_option(std::string opt)
         }
     }
     error("Positional arguments such as '" + opt + "' aren't yet supported.");
-    // return add_option_internal(opt, "");
+    return add_option_internal(opt, "");
 }
 //----------------------------------------------------------------------------
 option &parser::add_option_internal(std::string longoption, 
@@ -368,7 +398,6 @@ void parser::eat_arguments(int argc, char const *argv[])
             {
                 bool valid_flag = false;
                 std::string key(1, argument[i]);
-                std::cout << "key is " << key << std::endl;
                 bool value_flag = (with_val.count(key) > 0);
                 if (value_flag)
                 {
@@ -470,6 +499,10 @@ void parser::eat_arguments(int argc, char const *argv[])
         }
 
     }
+    if (get_value("help"))
+    {
+        help();
+    }
     std::vector<std::string> missing;
     for (auto &opt : m_options)
     {
@@ -499,17 +532,17 @@ void parser::error(const std::string &e)
     exit(1);
 }
 
-// void parser::help()
-// {
-//     auto split = m_prog_name.find_last_of('/');
-//     std::string stripped_name = m_prog_name.substr(split + 1);
-//     std::cout << "usage: " << stripped_name << " [options]\n" << std::endl;
-//     for (auto &option : m_options)
-//     {
-//         auto opt = option;
-//         std::cout << "    " <<std::setw(2)<< opt.long_flag() << ", " << opt.short_flag() << std::left << std::setw(24) << opt.help() << std::endl;
-//     }
-// }
+void parser::help()
+{
+    auto split = m_prog_name.find_last_of('/');
+    std::string stripped_name = m_prog_name.substr(split + 1);
+    std::cout << "usage: " << stripped_name << " [options]" << std::endl;
+    for (auto &option : m_options)
+    {
+        option.help_doc();
+    }
+    exit(0);
+}
 
 //----------------------------------------------------------------------------
 template <class T>

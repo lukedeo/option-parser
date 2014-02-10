@@ -7,7 +7,7 @@ Because why not? I figured this was a good exercise in edge cases.
 
 ###Usage
 
-```
+```c++
 optionparser::parser p;
 
 p.add_option("-h")	.help("Display this message then exit.")
@@ -27,13 +27,16 @@ p.add_option("-save", "-s") .help("pass a file to save.")
 p.eat_arguments(argc, argv);
 
 double number_passed;
+
 if(p.get_value("number"))
 {
 	number_passed = p.get_value<double>("number");
 }
 
-
-
+if (p.get_value("file"))
+{
+    auto filenames = p.get_value<std::vector<std::string>>("file");
+}
 ```
 
 
