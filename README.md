@@ -10,10 +10,6 @@ Because why not? I figured this was a good exercise in edge cases.
 ```c++
 optionparser::parser p;
 
-p.add_option("-h")	.help("Display this message then exit.")
-					.dest("help");
-
-
 p.add_option("--number", "-n")	.help("pass a double")
 								.mode(optionparser::store_value);
 
