@@ -25,6 +25,7 @@ std::ostream& operator << (std::ostream& o, const std::vector<T> &v)
 
 int main(int argc, char const *argv[])
 {
+
     optionparser::parser p("A test to make sure that this option parser works");
 
 
@@ -33,11 +34,13 @@ int main(int argc, char const *argv[])
 
     p.add_option("-file")   .help("pass a list of files to load.")
                             .mode(optionparser::store_mult_values)
-                            .required(true);
+                            .required(true)
+                            .default_value("default_file.txt");
 
     p.add_option("-save", "-s") .help("pass a file to save.")
                                 .mode(optionparser::store_value)
-                                .required(true);
+                                // .required(true)
+                                .default_value("default.txt");
     
     p.eat_arguments(argc, argv);
 
