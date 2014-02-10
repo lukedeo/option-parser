@@ -2,7 +2,6 @@
 #include <iostream>
 #include <fstream>
 
-
 template <class T, class U>
 std::ostream& operator << ( std::ostream& o, const std::map<T, U> &m)
 {
@@ -44,8 +43,6 @@ int main(int argc, char const *argv[])
     
     p.eat_arguments(argc, argv);
 
-    // std::cout << "retrieved value for 2 * save is " << 2*lrn << std::endl;
-
     if (p.get_value("file"))
     {
         auto names = p.get_value<std::vector<std::string>>("file");
@@ -57,7 +54,6 @@ int main(int argc, char const *argv[])
             std::cout << "element " << i << ": " << names[i] << std::endl;
         }
 
-        // std::cout << names << std::endl;
     }
 
     if (p.get_value("save"))
@@ -71,8 +67,5 @@ int main(int argc, char const *argv[])
             std::cout << "element " << i << ": " << names[i] << std::endl;
         }
     }
-    
-
-
     return 0;
 }
