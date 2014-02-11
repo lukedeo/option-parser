@@ -122,6 +122,12 @@ struct option
         m_default_value = default_value;
         return *this;
     }
+    template <typename T>
+    option &default_value(const T &default_value)
+    {
+        m_default_value = std::to_string(default_value);
+        return *this;
+    }
 
     bool m_found = false;
     bool m_required = false;
