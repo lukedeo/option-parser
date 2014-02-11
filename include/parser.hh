@@ -122,12 +122,41 @@ struct option
         m_default_value = default_value;
         return *this;
     }
+
+    option &default_value(const char* default_value)
+    {
+        m_default_value = std::string(default_value);
+        return *this;
+    }
+
     template <typename T>
     option &default_value(const T &default_value)
     {
         m_default_value = std::to_string(default_value);
         return *this;
     }
+
+    //     option &default_value(const int &default_value)
+    // {
+    //     m_default_value = std::to_string(default_value);
+    //     return *this;
+    // }
+    // option &default_value(const double &default_value)
+    // {
+    //     m_default_value = std::to_string(default_value);
+    //     return *this;
+    // }
+    // option &default_value(const unsigned int &default_value)
+    // {
+    //     m_default_value = std::to_string(default_value);
+    //     return *this;
+    // }
+    // option &default_value(const float &default_value)
+    // {
+    //     m_default_value = std::to_string(default_value);
+    //     return *this;
+    // }
+
 
     bool m_found = false;
     bool m_required = false;
