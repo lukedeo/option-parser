@@ -745,6 +745,28 @@ std::vector<std::string> parser::get_value<std::vector<std::string>>(
     }  
 }
 //----------------------------------------------------------------------------
+template <>
+std::vector<int> parser::get_value<std::vector<int>>(
+    std::string key)
+{
+    try
+    {
+        std::vector<int> v;
+        for (auto &entry : m_values[key])
+        {
+            v.push_back(std::stoi(entry));
+        }
+        return std::move(v);
+    }
+    catch(std::out_of_range &err)
+    {
+        std::string e("Tried to access value for field '");
+        e += key;
+        e += "' which is not a valid field.";
+        throw std::out_of_range(e);
+    }  
+}
+//----------------------------------------------------------------------------
 inline std::string remove_character(std::string str, const char c)
 {
     std::string::iterator end_pos = std::remove(str.begin(), str.end(), c);
