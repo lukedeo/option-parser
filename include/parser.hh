@@ -563,11 +563,15 @@ void parser::eat_arguments(int argc, char const *argv[])
     }
     std::vector<std::string> missing;
     for (auto &opt : m_options)
-    {
-        
+    {    
         if ((opt.required()) && (!opt.found()))
         {
             missing.push_back(opt.dest());
+        }
+        else if ((opt.default_value() != "") && (!opt.found()))
+        {
+            m_values[opt.dest()].push_back(opt.default_value());
+            opt.found() = true;
         }
     }
     if (missing.size() > 0)
