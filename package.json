@@ -1,0 +1,9 @@
+{
+  "name": "cmd-parser",
+  "version": "0.0.1",
+  "repo": "lukedeo/cmd-parser",
+  "description": "A Lightweight, header-only commandline parser",
+  "keywords": ["command", "parser", "flags", "options"],
+  "src": ["include/parser.hh"]
+}
+
