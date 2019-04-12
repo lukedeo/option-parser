@@ -5,8 +5,8 @@
 
 TEST_CASE("testing current parser functionality") 
 {
-    int argc = 18;
-    const char * argv[18];
+    int argc = 19;
+    const char * argv[19];
     argv[0] = "tests";
     argv[1] = "--flag";
     argv[2] = "--only_large";
@@ -25,12 +25,14 @@ TEST_CASE("testing current parser functionality")
     argv[15] = "str3";
     argv[16] = "str4";
     argv[17] = "str5";
- 
+    argv[18] = "-b";
 
     optionparser::parser p("A test to make sure that this option parser works");
 
 
     p.add_option("--flag", "-f") .help("just flag");
+    p.add_option("--boolean", "-b") .help("boolean").mode(optionparser::store_true);
+    
     p.add_option("--only_large") .help("set only large opt");
     p.add_option("-s") .help("set only small opt");
     p.add_option("-q", "--first_short1") .help("first_short1");
@@ -99,6 +101,11 @@ TEST_CASE("testing current parser functionality")
         CHECK(names[2] == argv[15]);
         CHECK(names[3] == argv[16]);
         CHECK(names[4] == argv[17]);
+    }
+
+    if (p.get_value("boolean"))
+    {
+        CHECK(p.get_value<bool>("boolean") == true);
     }
 
 
