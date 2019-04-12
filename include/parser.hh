@@ -323,83 +323,43 @@ bool parser::oo(std::vector<std::string> &arguments,  std::string &argument, uns
 
 bool parser::get_value_arg(std::vector<std::string> &arguments,  std::string &argument, unsigned int &arg, option &opt)
 {
-    bool skip = false;
-    if (++arg >= arguments.size()) {
-        if (opt.default_value() == "") {
-            std::string e("error, flag '" +
-                            opt.long_flag() +
-                            "' requires an argument.");
-            error(e);
+    if (arg + 1 >= arguments.size())
+    {
+        if (opt.default_value() == "") 
+        {
+            error("error, flag '" + opt.long_flag() + "' requires an argument.");
             return false;
         }
-        skip = true;
-        if (m_values[opt.dest()].size() == 0) {
-            m_values[opt.dest()].push_back(
-                opt.default_value());
+        if (m_values[opt.dest()].size() == 0)
+        {
+            m_values[opt.dest()].push_back(opt.default_value());
         }
+        return true;
     }
-    std::string next_arg;
-    if (!skip) {
-        next_arg = arguments[arg];
-        if (next_arg[0] != '-') {
-            m_values[opt.dest()].clear();
-            m_values[opt.dest()].push_back(next_arg);
-        } else {
-            if (m_values[opt.dest()].size() == 0) {
-                m_values[opt.dest()].push_back(
-                    opt.default_value());
-            }
+    
+    if (arguments[arg + 1][0] == '-')
+    {    
+        if (m_values[opt.dest()].size() == 0) 
+        {
+            m_values[opt.dest()].push_back(opt.default_value());
         }
+        return true;
     }
+    
+    m_values[opt.dest()].clear();
+    while (arguments[arg + 1][0] != '-') 
+    {
+        if (arg + 1 >= arguments.size()) {
+            break;
+        }
+        
+        m_values[opt.dest()].push_back(arguments[arg + 1]);
+        arg++;
+    }
+
     return true;
 }
 
-bool parser::get_mult_values(std::vector<std::string> &arguments,  std::string &argument, unsigned int &arg, option &opt)
-{
-       bool skip = false;
-            if (++arg >= arguments.size()) {
-                if (opt.default_value() == "") {
-                    std::string e("error, flag '" +
-                                    opt.long_flag() +
-                                    "' requires an argument.");
-                    error(e);
-                    return false;
-                }
-                skip = true;
-                if (m_values[opt.dest()].size() == 0) {
-                    m_values[opt.dest()].push_back(
-                        opt.default_value());
-                }
-            }
-            if (!skip) {
-                auto next_arg = arguments[arg];
-                if (next_arg[0] == '-') {
-                    if ((opt.default_value() == "") &&
-                        (m_values[opt.dest()].size() == 0)) {
-                        std::string e(
-                            "error, flag '" + opt.long_flag() +
-                            "' requires at least one argument.");
-                        error(e);
-                         return false;
-                    }
-                    if ((opt.default_value() != "") &&
-                        (m_values[opt.dest()].size() == 0)) {
-                        m_values[opt.dest()].push_back(
-                            opt.default_value());
-                    }
-                }
-                while (next_arg[0] != '-') {
-
-                    m_values[opt.dest()].push_back(next_arg);
-                    if (++arg >= arguments.size()) {
-                        break;
-                    }
-                    next_arg = arguments[arg];
-                }
-                arg--;
-                return true;
-            }
-}
 
 bool parser::try_to_get_short_optiopn(std::vector<std::string> &arguments, std::string &argument, unsigned int &arg )
 { 
@@ -434,7 +394,7 @@ bool parser::try_to_get_short_optiopn(std::vector<std::string> &arguments, std::
             }
         }
 
-        if ((opt.mode() == store_value) &&
+        if (((opt.mode() == store_value) || (opt.mode() == store_mult_values))&&
             (option.found() == false)) 
         {
             if(get_value_arg(arguments, argument, arg, opt ))
@@ -443,15 +403,7 @@ bool parser::try_to_get_short_optiopn(std::vector<std::string> &arguments, std::
                 return true;
             }
         }
-        if ((opt.mode() == store_mult_values) &&
-            (option.found() == false))
-        {
-          if(get_mult_values(arguments, argument, arg, opt ))
-            {
-                option.found() = true;
-                return true;
-            }
-        }
+      
         
     }
 

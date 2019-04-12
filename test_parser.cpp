@@ -5,8 +5,8 @@
 
 TEST_CASE("testing current parser functionality") 
 {
-    int argc = 19;
-    const char * argv[19];
+    int argc = 20;
+    const char * argv[20];
     argv[0] = "tests";
     argv[1] = "--flag";
     argv[2] = "--only_large";
@@ -16,16 +16,17 @@ TEST_CASE("testing current parser functionality")
     argv[6] = "--in-fil-e";
     argv[7] = "-dash";
     argv[8] = "--store_str";
-    argv[9] = "test_str";
+    argv[9] = "dash";
     argv[10] = "--store_num";
     argv[11] = "72";
-    argv[12] = "-m";
+    argv[12] = "--store_multy_s";
     argv[13] = "str1";
     argv[14] = "str2";
     argv[15] = "str3";
     argv[16] = "str4";
     argv[17] = "str5";
     argv[18] = "-b";
+    argv[19] = "--pp";
 
     optionparser::parser p("A test to make sure that this option parser works");
 
@@ -39,10 +40,11 @@ TEST_CASE("testing current parser functionality")
     p.add_option("-w", "--first_short2") .help("first_short2");
     p.add_option("--in-fil-e", "-i").help("dashes in name");
     p.add_option("-dash") .help("only one dash for large opt");
-    p.add_option("--store_str", "-v") .help("store single str val").mode(optionparser::store_value);
+    p.add_option("--store_str", "-v") .help("store single str val").mode(optionparser::store_value).default_value("stor str def1");
     p.add_option("--store_num", "-n") .help("store single num val").mode(optionparser::store_value);
-    p.add_option("--store_multy_s", "-m") .help("store multy str val").mode(optionparser::store_mult_values);
-  
+    p.add_option("--store_multy_s", "-m") .help("store multy str val").mode(optionparser::store_mult_values).default_value("def2");
+    p.add_option("--pp", "-p") .help("store single str val").mode(optionparser::store_value).default_value("p1");
+
     p.eat_arguments(argc, argv);
 
     bool chech_is_flag_set = false; 
@@ -110,3 +112,8 @@ TEST_CASE("testing current parser functionality")
 
 
 }
+
+// TEST_CASE("testingget_value_arg(arguments, argument, arg, opt ))") 
+// {
+//     get_value_arg(arguments, argument, arg, opt );
+// }
