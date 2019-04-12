@@ -228,12 +228,12 @@ class parser {
     std::unordered_set<std::string> with_val, without_val;
     Dictionary m_opt_map;
     std::map<std::string, unsigned int> idx;
-    bool parse_log_opt(std::vector<std::string> &arguments,  std::string &argument, unsigned int &arg);
     bool get_mult_values(std::vector<std::string> &arguments,  std::string &argument, unsigned int &arg, option & opt);
     bool get_value_arg(std::vector<std::string> &arguments,  std::string &argument, unsigned int &arg, option &opt);
-    
     bool oo(std::vector<std::string> &arguments,  std::string &argument, unsigned int &arg, option &opt);
-    bool get_short(std::vector<std::string> &arguments, std::string &argument, unsigned int &arg );
+    
+    bool try_to_get_short_optiopn(std::vector<std::string> &arguments, std::string &argument, unsigned int &arg);
+    bool magic_funct(std::vector<std::string> &arguments, std::string &argument, unsigned int &arg );
 };
 //----------------------------------------------------------------------------
 option &parser::add_option(std::string longoption, std::string shortoption) {
@@ -401,7 +401,7 @@ bool parser::get_mult_values(std::vector<std::string> &arguments,  std::string &
             }
 }
 
-bool parser::parse_log_opt(std::vector<std::string> &arguments, std::string &argument, unsigned int &arg )
+bool parser::try_to_get_short_optiopn(std::vector<std::string> &arguments, std::string &argument, unsigned int &arg )
 { 
      for (auto &option : m_options) // for each option set
     {
@@ -458,7 +458,7 @@ bool parser::parse_log_opt(std::vector<std::string> &arguments, std::string &arg
     return false;
 }
 
-bool parser::get_short(std::vector<std::string> &arguments, std::string &argument, unsigned int &arg )
+bool parser::magic_funct(std::vector<std::string> &arguments, std::string &argument, unsigned int &arg )
 {
     if ((argument[0] == '-')  && (argument[1] != '-')) {
             for (unsigned int i = 1; i < argument.size(); ++i) {
@@ -568,17 +568,18 @@ void parser::eat_arguments(unsigned int argc, char const *argv[]) {
         auto argument = arguments[arg];
         bool match_found = false;
 
-        match_found = parse_log_opt(arguments, argument, arg);       
+        match_found = try_to_get_short_optiopn(arguments, argument, arg);       
 
         if(match_found)
             continue;
 
-        match_found = get_short(arguments, argument, arg);   
+        match_found = magic_funct(arguments, argument, arg);   
 
         if (!match_found) {
             error("Unrecognized flag/option '" + argument + "'");
         }
     }
+
     if (get_value("help")) {
         help();
     }
