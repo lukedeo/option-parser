@@ -20,6 +20,8 @@ namespace optionparser {
 
 enum storage_mode { store_true, store_value, store_mult_values };
 
+enum option_type { long_opt = 0, short_opt, positional_opt, empty_opt };
+
 struct dict_entry {
     unsigned int pos;
     std::string name;
@@ -138,6 +140,9 @@ struct option {
     std::string m_help = "";
     std::string m_dest = "";
     std::string m_default_value = "";
+
+    static option_type get_type(std::string opt);
+    static std::string get_destination(std::string opt1, std::string opt2, option_type ft, option_type st);
 };
 //----------------------------------------------------------------------------
 inline std::string remove_character(std::string str, char c = ' ');
@@ -145,6 +150,46 @@ inline std::string remove_character(std::string str, char c = ' ');
 typedef std::map<std::string, std::vector<std::string>> Archive;
 typedef std::map<std::string, dict_entry> Dictionary;
 
+option_type option::get_type(std::string opt)
+{
+    if (opt == "")
+        return option_type::empty_opt;
+
+    if (opt[0] == '-')
+    {
+        if (opt.size() == 2)
+            return option_type::short_opt;
+
+        else
+            return option_type::long_opt;
+
+    }
+    return option_type::positional_opt;
+}
+std::string option::get_destination(std::string first_option, std::string second_option, option_type first_opt_type, option_type second_opt_type)
+{
+    std::string dest;
+
+    if (first_opt_type == option_type::long_opt) {
+        dest =  remove_character(first_option, '-');
+
+    }
+    else if (second_opt_type == option_type::long_opt){
+        dest = remove_character(second_option, '-');
+    }
+    else
+    {
+        if (first_opt_type == option_type::short_opt) {
+        dest = remove_character(first_option, '-') + "_option";
+
+        }
+        else if (second_opt_type == option_type::short_opt){
+            dest = remove_character(second_option, '-') + "_option";
+        }
+    }
+
+    return dest;
+}
 //-----------------------------------------------------------------------------
 //  Parser Class
 //-----------------------------------------------------------------------------
@@ -188,39 +233,41 @@ option &parser::add_option(std::string longoption, std::string shortoption) {
 }
 //----------------------------------------------------------------------------
 option &parser::add_option(std::string opt) {
-    if (opt[0] == '-') {
-        if (opt[1] == '-') {
-            return add_option_internal(opt, "");
-        }
-        if (opt.size() > 2) {
-            return add_option_internal(opt, "");
-        } else {
-            return add_option_internal("", opt);
-        }
-    }
-    error("Positional arguments such as '" + opt + "' aren't yet supported.");
     return add_option_internal(opt, "");
 }
 //----------------------------------------------------------------------------
-option &parser::add_option_internal(std::string longoption,
-                                    std::string shortoption) {
+option &parser::add_option_internal(std::string first_option,
+                                    std::string second_option) {
+
     m_options.resize(m_options.size() + 1);
-
     option &opt = m_options.back();
+    option_type first_option_type = option::get_type(first_option);
+    option_type second_option_type = option::get_type(second_option);
 
-    if (longoption != "") {
-        if (opt.m_dest == "") {
-            opt.m_dest = remove_character(longoption, '-');
-        }
-    } else {
-        if (opt.m_dest == "") {
-            opt.m_dest = remove_character(shortoption, '-') + "_option";
-        }
+    opt.m_dest = option::get_destination(first_option, second_option, first_option_type, second_option_type);
+
+    if (first_option_type == option_type::long_opt)
+    {
+        opt.long_flag() = first_option;
+    }
+    else if (second_option_type == option_type::long_opt) 
+    {
+        opt.long_flag() = second_option;
     }
 
-    opt.long_flag() = longoption;
-    opt.short_flag() = shortoption;
-    auto k = remove_character(shortoption, '-');
+    std::string k;
+    if (first_option_type == option_type::short_opt)
+    {
+        opt.short_flag() = first_option;
+        k = remove_character(first_option, '-');
+    }
+    else if (second_option_type == option_type::short_opt) 
+    {
+        opt.short_flag() = second_option;
+        k = remove_character(second_option, '-');
+    }
+
+
     m_opt_map[k].pos = m_options.size() - 1;
     m_opt_map[k].name = opt.m_dest;
     return opt;
@@ -638,11 +685,19 @@ std::vector<int> parser::get_value<std::vector<int>>(std::string key) {
 }
 //----------------------------------------------------------------------------
 inline std::string remove_character(std::string str, const char c) {
-    std::string::iterator end_pos = std::remove(str.begin(), str.end(), c);
-    str.erase(end_pos, str.end());
+    //dummy way to remove -- and - from args
+    auto pos = str.find("--");
+
+    if (pos == 0)
+        str.erase(0, 2);
+
+    pos = str.find('-');
+    if (pos == 0)
+        str.erase(0, 1);
+
     return str;
 }
 
 } // end namespace
 
-#endif
+#endif 
