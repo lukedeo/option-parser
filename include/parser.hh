@@ -282,27 +282,30 @@ option &parser::add_option_internal(std::string first_option,
 }
 bool parser::oo(std::vector<std::string> &arguments,  std::string &argument, unsigned int &arg, option &opt)
 {
-    bool is_found = false;
- 
+    std::cout << "oo function "<< std::endl;
     auto search_pt = argument.find_first_of('=');
     if (search_pt == std::string::npos) 
     {
-        std::string e = "Error, long options (";
-        e += opt.long_flag();
-        e += ") require a '=' or space before a value.";
-        error(e);
-        return false;
+        search_pt = argument.find_first_of(' ');
+        if (search_pt == std::string::npos) 
+        {
+            error("Error, long options (" + opt.long_flag() + ") require a '=' or space before a value.");
+            return false;
+        }
+      
     }
     std::string val = argument.substr(search_pt + 1);
     if (val == "") {
-        std::string e = "Error, argument needed";
-        error(e + " after '='.");
+        error("Error, argument neededafter '='.");
         return false;
     }
-    if (opt.mode() == store_value) {
+    if (opt.mode() == store_value)
+     {
         m_values[opt.dest()].clear();
         m_values[opt.dest()].push_back(val);
-    } else {
+    } 
+    else 
+    {
         m_values[opt.dest()].push_back(val);
         if (++arg < arguments.size()) {
             auto next_arg = arguments[arg];
@@ -384,9 +387,10 @@ bool parser::try_to_get_short_optiopn(std::vector<std::string> &arguments, std::
             option.found() = true;
             return true;
         }
-
+        std::cout << "arg size = " << argument.size() << " long size " << opt.long_flag().size() << std::endl; 
         if (argument.size() > opt.long_flag().size()) 
         {
+            std::cout << "oo function "<< std::endl;
             if(oo(arguments, argument, arg, opt ))
             {
                 option.found() = true;
@@ -413,84 +417,84 @@ bool parser::try_to_get_short_optiopn(std::vector<std::string> &arguments, std::
 bool parser::magic_funct(std::vector<std::string> &arguments, std::string &argument, unsigned int &arg )
 {
     if ((argument[0] == '-')  && (argument[1] != '-')) {
-            for (unsigned int i = 1; i < argument.size(); ++i) {
-                std::string key(1, argument[i]);
-                bool value_flag = (with_val.count(key) > 0);
-                if (value_flag) {
-                    auto crit_pos = argument.find(key);
-                    if (argument.size() > (crit_pos + 1)) {
-                        if (m_options[m_opt_map[key].pos].mode() ==
-                            store_value) {
-                            m_values[m_opt_map[key].name].clear();
-                            m_values[m_opt_map[key].name].push_back(
-                                argument.substr(i + 1));
+        for (unsigned int i = 1; i < argument.size(); ++i) {
+            std::string key(1, argument[i]);
+            bool value_flag = (with_val.count(key) > 0);
+            if (value_flag) {
+                auto crit_pos = argument.find(key);
+                if (argument.size() > (crit_pos + 1)) {
+                    if (m_options[m_opt_map[key].pos].mode() ==
+                        store_value) {
+                        m_values[m_opt_map[key].name].clear();
+                        m_values[m_opt_map[key].name].push_back(
+                            argument.substr(i + 1));
 
-                            m_options[m_opt_map[key].pos].found() = true;
-                            break;
-                        } else {
-                            m_values[m_opt_map[key].name].push_back(
-                                argument.substr(i + 1));
+                        m_options[m_opt_map[key].pos].found() = true;
+                        break;
+                    } else {
+                        m_values[m_opt_map[key].name].push_back(
+                            argument.substr(i + 1));
 
-                            m_options[m_opt_map[key].pos].found() = true;
-                            if (++arg < arguments.size()) {
-                                auto next_arg = arguments[arg];
-                                while (next_arg[0] != '-') {
-                                    m_values[m_opt_map[key].name].push_back(
-                                        next_arg);
-
-                                    if (++arg >= arguments.size()) {
-                                        break;
-                                    }
-                                    next_arg = arguments[arg];
-                                }
-                                arg--;
-                            }
-                            break;
-                        }
-                    } else // case where theres a space until the next args.
-                    {
-                        if (++arg >= arguments.size()) {
-                            std::string e("error, flag '-" + key +
-                                          "' requires at least one argument.");
-                            error(e);
-                        }
-                        auto next_arg = arguments[arg];
-                        if (next_arg[0] == '-') {
-                            std::string e("error, flag '-" + key +
-                                          "' requires an argument.");
-                            error(e);
-                        }
-                        if (m_options[m_opt_map[key].pos].mode() ==
-                            store_value) {
-                            m_values[m_opt_map[key].name].clear();
-                            m_values[m_opt_map[key].name].push_back(next_arg);
-                            m_options[m_opt_map[key].pos].found() = true;
-                        } else {
+                        m_options[m_opt_map[key].pos].found() = true;
+                        if (++arg < arguments.size()) {
+                            auto next_arg = arguments[arg];
                             while (next_arg[0] != '-') {
-
                                 m_values[m_opt_map[key].name].push_back(
                                     next_arg);
+
                                 if (++arg >= arguments.size()) {
                                     break;
                                 }
                                 next_arg = arguments[arg];
                             }
-                            m_options[m_opt_map[key].pos].found() = true;
                             arg--;
                         }
+                        break;
                     }
-                    break;
-                }
+                } else // case where theres a space until the next args.
+                {
+                    if (++arg >= arguments.size()) {
+                        std::string e("error, flag '-" + key +
+                                        "' requires at least one argument.");
+                        error(e);
+                    }
+                    auto next_arg = arguments[arg];
+                    if (next_arg[0] == '-') {
+                        std::string e("error, flag '-" + key +
+                                        "' requires an argument.");
+                        error(e);
+                    }
+                    if (m_options[m_opt_map[key].pos].mode() ==
+                        store_value) {
+                        m_values[m_opt_map[key].name].clear();
+                        m_values[m_opt_map[key].name].push_back(next_arg);
+                        m_options[m_opt_map[key].pos].found() = true;
+                    } else {
+                        while (next_arg[0] != '-') {
 
-                bool bool_flag = (without_val.count(key) > 0);
-                if (bool_flag) {
-                    m_options[m_opt_map[key].pos].found() = true;
-                } else {
-                    error("Invalid flag '-" + key + "'");
+                            m_values[m_opt_map[key].name].push_back(
+                                next_arg);
+                            if (++arg >= arguments.size()) {
+                                break;
+                            }
+                            next_arg = arguments[arg];
+                        }
+                        m_options[m_opt_map[key].pos].found() = true;
+                        arg--;
+                    }
                 }
+                break;
             }
-            return true;
+
+            bool bool_flag = (without_val.count(key) > 0);
+            if (bool_flag) {
+                m_options[m_opt_map[key].pos].found() = true;
+            } else {
+                error("Invalid flag '-" + key + "'");
+            }
         }
+        return true;
+    }
 }
 
 void parser::eat_arguments(unsigned int argc, char const *argv[]) {

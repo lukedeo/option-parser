@@ -117,3 +117,30 @@ TEST_CASE("testing current parser functionality")
 // {
 //     get_value_arg(arguments, argument, arg, opt );
 // }
+
+
+TEST_CASE("test oo funct") 
+{
+    int argc = 3;
+    const char * argv[3];
+    argv[0] = "tests";
+    argv[1] = "--flag-asdsaflag";
+    argv[2] = "-b";
+ 
+
+    optionparser::parser p("A test to make sure that this option parser works");
+
+    p.add_option("--flag", "-f") .help("just=flag").mode(optionparser::store_value);;
+    p.add_option("--boolean", "-b") .help("boolean").mode(optionparser::store_true);
+
+    p.eat_arguments(argc, argv);
+
+    bool chech_is_flag_set = false; 
+    if (p.get_value("flag"))
+    {
+      chech_is_flag_set = true;
+      auto names = p.get_value<std::vector<std::string>>("flag");
+      CHECK(names[0] == "asdsaflag");
+    }
+ 
+}
