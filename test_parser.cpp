@@ -16,7 +16,7 @@ TEST_CASE("testing current parser functionality")
     argv[6] = "--in-fil-e";
     argv[7] = "-dash";
     argv[8] = "--store_str";
-    argv[9] = "dash";
+    argv[9] = "qqqdash";
     argv[10] = "--store_num";
     argv[11] = "72";
     argv[12] = "--store_multy_s";
@@ -119,31 +119,31 @@ TEST_CASE("testing current parser functionality")
 // }
 
 
-TEST_CASE("test oo funct") 
-{
-    int argc = 4;
-    const char * argv[4];
-    argv[0] = "tests";
-    argv[1] = "--flag asdsaflag";
-    argv[2] = "bsadsad";
-    argv[3] = "bqwewqeq";
+// TEST_CASE("test oo funct") 
+// {
+//     int argc = 4;
+//     const char * argv[4];
+//     argv[0] = "tests";
+//     argv[1] = "--flag asdsaflag";
+//     argv[2] = "bsadsad";
+//     argv[3] = "bqwewqeq";
 
 
-    optionparser::parser p("A test to make sure that this option parser works");
+//     optionparser::parser p("A test to make sure that this option parser works");
 
-    p.add_option("--flag", "-f") .help("just=flag").mode(optionparser::store_mult_values);;
-    p.add_option("--boolean", "-b") .help("boolean").mode(optionparser::store_true);
+//     p.add_option("--flag", "-f") .help("just=flag").mode(optionparser::store_mult_values);;
+//     p.add_option("--boolean", "-b") .help("boolean").mode(optionparser::store_true);
 
-    p.eat_arguments(argc, argv);
+//     p.eat_arguments(argc, argv);
 
-    bool chech_is_flag_set = false; 
-    if (p.get_value("flag"))
-    {
-      chech_is_flag_set = true;
-      auto names = p.get_value<std::vector<std::string>>("flag");
-      CHECK(names[0] == "asdsaflag");
-      CHECK(names[1] == "bsadsad");
-      CHECK(names[2] == "bqwewqeq");
-    }
+//     bool chech_is_flag_set = false; 
+//     if (p.get_value("flag"))
+//     {
+//       chech_is_flag_set = true;
+//       auto names = p.get_value<std::vector<std::string>>("flag");
+//       CHECK(names[0] == "asdsaflag");
+//       CHECK(names[1] == "bsadsad");
+//       CHECK(names[2] == "bqwewqeq");
+//     }
  
-}
+// }

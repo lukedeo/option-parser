@@ -280,28 +280,28 @@ option &parser::add_option_internal(std::string first_option,
     m_opt_map[k].name = opt.m_dest;
     return opt;
 }
-bool parser::get_arg_with_value(std::vector<std::string> &arguments, unsigned int &arg, option &opt)
+
+bool parser::get_value_arg(std::vector<std::string> &arguments, unsigned int &arg, option &opt)
 {
-    auto search_pt = arguments[arg].find_first_of('=');
-    if (search_pt == std::string::npos) 
+    std::cout << "start  " <<  arguments[arg]<< std::endl; 
+    std::string val = "";
+    if (arguments[arg].size() > opt.long_flag().size()) 
     {
-        search_pt = arguments[arg].find_first_of(' ');
+        auto search_pt = arguments[arg].find_first_of('=');
         if (search_pt == std::string::npos) 
         {
-            error("Error, long options (" + opt.long_flag() + ") require a '=' or space before a value.");
-            return false;
-        }
-      
-    }
-    std::string val = arguments[arg].substr(search_pt + 1);
-    if (val == "") {
-        error("Error, argument needed after '='.");
-        return false;
+            search_pt = arguments[arg].find_first_of(' ');
+            if (search_pt == std::string::npos) 
+            {
+                error("Error, long options (" + opt.long_flag() + ") require a '=' or space before a value.");
+                return false;
+            }
+          
+            val = arguments[arg].substr(search_pt + 1);
+        }       
     }
 
-    m_values[opt.dest()].clear();
-    m_values[opt.dest()].push_back(val);
-    if (opt.mode() == store_mult_values)
+    else
     {
         if (arg + 1 >= arguments.size())
         {
@@ -312,51 +312,36 @@ bool parser::get_arg_with_value(std::vector<std::string> &arguments, unsigned in
             }
             if (m_values[opt.dest()].size() == 0)
             {
-                m_values[opt.dest()].push_back(opt.default_value());
+               val = opt.default_value();
+               
             }
-            return true;
         }
-        while (arguments[arg + 1][0] != '-') 
+        else
         {
-            if (arg + 1 >= arguments.size()) {
-                break;
-            }
             
-            m_values[opt.dest()].push_back(arguments[arg + 1]);
-            arg++;
+            if (arguments[arg + 1][0] == '-')
+            {    
+                if (opt.default_value() == "") 
+                {
+                    error("error, flag '" + opt.long_flag() + "' requires an argument.");
+                    return false;
+                }
+                if (m_values[opt.dest()].size() == 0) 
+                {
+                val = opt.default_value();
+                }
+            }
         }
-
+    
         
     }
-    return true;
-}
-
-bool parser::get_value_arg(std::vector<std::string> &arguments, unsigned int &arg, option &opt)
-{
-    if (arg + 1 >= arguments.size())
-    {
-        if (opt.default_value() == "") 
-        {
-            error("error, flag '" + opt.long_flag() + "' requires an argument.");
-            return false;
-        }
-        if (m_values[opt.dest()].size() == 0)
-        {
-            m_values[opt.dest()].push_back(opt.default_value());
-        }
-        return true;
-    }
-    
-    if (arguments[arg + 1][0] == '-')
-    {    
-        if (m_values[opt.dest()].size() == 0) 
-        {
-            m_values[opt.dest()].push_back(opt.default_value());
-        }
-        return true;
-    }
-    
     m_values[opt.dest()].clear();
+    if (val != "") 
+    {
+       m_values[opt.dest()].push_back(val);
+        return true;
+    }
+   
     while (arguments[arg + 1][0] != '-') 
     {
         if (arg + 1 >= arguments.size()) {
@@ -395,15 +380,7 @@ bool parser::try_to_get_short_optiopn(std::vector<std::string> &arguments,  unsi
             return true;
         }
         std::cout << "arg size = " << arguments[arg].size() << " long size " << opt.long_flag().size() << std::endl; 
-        if (arguments[arg].size() > opt.long_flag().size()) 
-        {
-            std::cout << "oo function "<< std::endl;
-            if(get_arg_with_value(arguments, arg, opt ))
-            {
-                option.found() = true;
-                return true;
-            }
-        }
+   
 
         if (((opt.mode() == store_value) || (opt.mode() == store_mult_values))&&
             (option.found() == false)) 
