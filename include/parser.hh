@@ -232,8 +232,8 @@ class parser {
     bool get_value_arg(std::vector<std::string> &arguments,   unsigned int &arg, option &opt);
     bool get_arg_with_value(std::vector<std::string> &arguments,   unsigned int &arg, option &opt);
     
-    bool try_to_get_short_optiopn(std::vector<std::string> &arguments,  unsigned int &arg);
-    bool magic_funct(std::vector<std::string> &arguments, std::string &argument, unsigned int &arg );
+    bool try_to_get_long_args(std::vector<std::string> &arguments,  unsigned int &arg);
+    bool try_to_get_short_args(std::vector<std::string> &arguments, std::string &argument, unsigned int &arg );
 };
 //----------------------------------------------------------------------------
 option &parser::add_option(std::string longoption, std::string shortoption) {
@@ -283,8 +283,8 @@ option &parser::add_option_internal(std::string first_option,
 
 bool parser::get_value_arg(std::vector<std::string> &arguments, unsigned int &arg, option &opt)
 {
-    std::cout << "start  " <<  arguments[arg]<< std::endl; 
     std::string val = "";
+     m_values[opt.dest()].clear();
     if (arguments[arg].size() > opt.long_flag().size()) 
     {
         auto search_pt = arguments[arg].find_first_of('=');
@@ -297,7 +297,7 @@ bool parser::get_value_arg(std::vector<std::string> &arguments, unsigned int &ar
                 return false;
             }
           
-            val = arguments[arg].substr(search_pt + 1);
+            m_values[opt.dest()].push_back( arguments[arg].substr(search_pt + 1));
         }       
     }
 
@@ -335,10 +335,10 @@ bool parser::get_value_arg(std::vector<std::string> &arguments, unsigned int &ar
     
         
     }
-    m_values[opt.dest()].clear();
+   
     if (val != "") 
     {
-       m_values[opt.dest()].push_back(val);
+        m_values[opt.dest()].push_back(val);
         return true;
     }
    
@@ -356,7 +356,7 @@ bool parser::get_value_arg(std::vector<std::string> &arguments, unsigned int &ar
 }
 
 
-bool parser::try_to_get_short_optiopn(std::vector<std::string> &arguments,  unsigned int &arg )
+bool parser::try_to_get_long_args(std::vector<std::string> &arguments,  unsigned int &arg )
 { 
      for (auto &option : m_options) // for each option set
     {
@@ -379,8 +379,6 @@ bool parser::try_to_get_short_optiopn(std::vector<std::string> &arguments,  unsi
             option.found() = true;
             return true;
         }
-        std::cout << "arg size = " << arguments[arg].size() << " long size " << opt.long_flag().size() << std::endl; 
-   
 
         if (((opt.mode() == store_value) || (opt.mode() == store_mult_values))&&
             (option.found() == false)) 
@@ -390,15 +388,14 @@ bool parser::try_to_get_short_optiopn(std::vector<std::string> &arguments,  unsi
                 option.found() = true;
                 return true;
             }
-        }
-      
+        }      
         
     }
 
     return false;
 }
 
-bool parser::magic_funct(std::vector<std::string> &arguments, std::string &argument, unsigned int &arg )
+bool parser::try_to_get_short_args(std::vector<std::string> &arguments, std::string &argument, unsigned int &arg )
 {
     if ((argument[0] == '-')  && (argument[1] != '-')) {
         for (unsigned int i = 1; i < argument.size(); ++i) {
@@ -508,12 +505,12 @@ void parser::eat_arguments(unsigned int argc, char const *argv[]) {
         auto argument = arguments[arg];
         bool match_found = false;
 
-        match_found = try_to_get_short_optiopn(arguments, arg);       
+        match_found = try_to_get_long_args(arguments, arg);       
 
         if(match_found)
             continue;
 
-        match_found = magic_funct(arguments, argument, arg);   
+        match_found = try_to_get_short_args(arguments, argument, arg);   
 
         if (!match_found) {
             error("Unrecognized flag/option '" + argument + "'");
