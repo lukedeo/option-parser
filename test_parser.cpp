@@ -12,7 +12,7 @@ TEST_CASE("testing current parser functionality")
     argv[2] = "--only_large";
     argv[3] = "-s";
     argv[4] = "-q";
-    argv[5] = "--first_short2";
+    argv[5] = "first_short2";
     argv[6] = "--in-fil-e";
     argv[7] = "-dash";
     argv[8] = "--store_str";
@@ -36,7 +36,7 @@ TEST_CASE("testing current parser functionality")
     
     p.add_option("--only_large") .help("set only large opt");
     p.add_option("-s") .help("set only small opt");
-    p.add_option("-q", "--first_short1") .help("first_short1");
+    p.add_option("-q", "--first_short1") .help("first_short1").mode(optionparser::store_value);
     p.add_option("-w", "--first_short2") .help("first_short2");
     p.add_option("--in-fil-e", "-i").help("dashes in name");
     p.add_option("-dash") .help("only one dash for large opt");
@@ -121,16 +121,17 @@ TEST_CASE("testing current parser functionality")
 
 TEST_CASE("test oo funct") 
 {
-    int argc = 3;
-    const char * argv[3];
+    int argc = 4;
+    const char * argv[4];
     argv[0] = "tests";
-    argv[1] = "--flag-asdsaflag";
-    argv[2] = "-b";
- 
+    argv[1] = "--flag asdsaflag";
+    argv[2] = "bsadsad";
+    argv[3] = "bqwewqeq";
+
 
     optionparser::parser p("A test to make sure that this option parser works");
 
-    p.add_option("--flag", "-f") .help("just=flag").mode(optionparser::store_value);;
+    p.add_option("--flag", "-f") .help("just=flag").mode(optionparser::store_mult_values);;
     p.add_option("--boolean", "-b") .help("boolean").mode(optionparser::store_true);
 
     p.eat_arguments(argc, argv);
@@ -141,6 +142,8 @@ TEST_CASE("test oo funct")
       chech_is_flag_set = true;
       auto names = p.get_value<std::vector<std::string>>("flag");
       CHECK(names[0] == "asdsaflag");
+      CHECK(names[1] == "bsadsad");
+      CHECK(names[2] == "bqwewqeq");
     }
  
 }
