@@ -209,8 +209,7 @@ class parser {
 
     void eat_arguments(unsigned int argc, char const *argv[]);
 
-    option &add_option(std::string longoption, std::string shortoption);
-    option &add_option(std::string opt);
+    option &add_option(std::string first_option, std::string second_option =  "");
 
     template <class T = bool> T get_value(std::string key);
 
@@ -233,19 +232,14 @@ class parser {
     bool get_arg_with_value(std::vector<std::string> &arguments,   unsigned int &arg, option &opt);
     
     bool try_to_get_long_args(std::vector<std::string> &arguments,  unsigned int &arg);
-    bool try_to_get_short_args(std::vector<std::string> &arguments, std::string &argument, unsigned int &arg );
+    bool try_to_get_short_args(std::vector<std::string> &arguments, unsigned int &arg );
 };
-//----------------------------------------------------------------------------
-option &parser::add_option(std::string longoption, std::string shortoption) {
-    return add_option_internal(longoption, shortoption);
+
+option &parser::add_option(std::string first_option, std::string second_option) {
+    return add_option_internal(first_option, second_option);
 }
-//----------------------------------------------------------------------------
-option &parser::add_option(std::string opt) {
-    return add_option_internal(opt, "");
-}
-//----------------------------------------------------------------------------
-option &parser::add_option_internal(std::string first_option,
-                                    std::string second_option) {
+
+option &parser::add_option_internal(std::string first_option,  std::string second_option){
 
     m_options.resize(m_options.size() + 1);
     option &opt = m_options.back();
@@ -313,41 +307,37 @@ bool parser::get_value_arg(std::vector<std::string> &arguments, unsigned int &ar
             if (m_values[opt.dest()].size() == 0)
             {
                val = opt.default_value();
-               
             }
         }
         else
         {
-            
             if (arguments[arg + 1][0] == '-')
-            {    
-                if (opt.default_value() == "") 
+            {
+                if (opt.default_value() == "")
                 {
                     error("error, flag '" + opt.long_flag() + "' requires an argument.");
                     return false;
                 }
-                if (m_values[opt.dest()].size() == 0) 
+                if (m_values[opt.dest()].size() == 0)
                 {
                 val = opt.default_value();
                 }
             }
         }
-    
-        
     }
-   
+
     if (val != "") 
     {
         m_values[opt.dest()].push_back(val);
         return true;
     }
-   
-    while (arguments[arg + 1][0] != '-') 
+
+    while (arguments[arg + 1][0] != '-')
     {
         if (arg + 1 >= arguments.size()) {
             break;
         }
-        
+
         m_values[opt.dest()].push_back(arguments[arg + 1]);
         arg++;
     }
@@ -364,16 +354,16 @@ bool parser::try_to_get_long_args(std::vector<std::string> &arguments,  unsigned
 
         if (opt.long_flag() == "") 
             continue;
-        
+
         if (arguments[arg][0] != '-') 
             continue;
-        
+
         if (arguments[arg].size() == 1) 
             error("A flag needs a letter...");
 
         if (arguments[arg].find(opt.long_flag()) != 0) 
             continue;
-        
+
         if (opt.mode() == store_true)
         {
             option.found() = true;
@@ -395,87 +385,92 @@ bool parser::try_to_get_long_args(std::vector<std::string> &arguments,  unsigned
     return false;
 }
 
-bool parser::try_to_get_short_args(std::vector<std::string> &arguments, std::string &argument, unsigned int &arg )
+bool parser::try_to_get_short_args(std::vector<std::string> &arguments,  unsigned int &arg )
 {
-    if ((argument[0] == '-')  && (argument[1] != '-')) {
-        for (unsigned int i = 1; i < argument.size(); ++i) {
-            std::string key(1, argument[i]);
-            bool value_flag = (with_val.count(key) > 0);
-            if (value_flag) {
-                auto crit_pos = argument.find(key);
-                if (argument.size() > (crit_pos + 1)) {
-                    if (m_options[m_opt_map[key].pos].mode() ==
-                        store_value) {
-                        m_values[m_opt_map[key].name].clear();
-                        m_values[m_opt_map[key].name].push_back(
-                            argument.substr(i + 1));
+    if (arguments[arg][0] != '-')
+        return false;
 
-                        m_options[m_opt_map[key].pos].found() = true;
-                        break;
-                    } else {
-                        m_values[m_opt_map[key].name].push_back(
-                            argument.substr(i + 1));
+    if(arguments[arg][1] == '-' )
+        return false;
 
-                        m_options[m_opt_map[key].pos].found() = true;
-                        if (++arg < arguments.size()) {
-                            auto next_arg = arguments[arg];
-                            while (next_arg[0] != '-') {
-                                m_values[m_opt_map[key].name].push_back(
-                                    next_arg);
+    for (unsigned int i = 1; i < arguments[arg].size(); ++i) 
+    {
+        std::string key(1, arguments[arg][i]);
 
-                                if (++arg >= arguments.size()) {
-                                    break;
-                                }
-                                next_arg = arguments[arg];
-                            }
-                            arg--;
-                        }
-                        break;
-                    }
-                } else // case where theres a space until the next args.
+        if (with_val.count(key) > 0) 
+        {
+            m_values[m_opt_map[key].name].clear();    
+            if (arguments[arg].size() > (arguments[arg].find(key) + 1)) 
+            {
+                if (m_options[m_opt_map[key].pos].mode() == store_value) 
                 {
-                    if (++arg >= arguments.size()) {
-                        std::string e("error, flag '-" + key +
-                                        "' requires at least one argument.");
-                        error(e);
-                    }
-                    auto next_arg = arguments[arg];
-                    if (next_arg[0] == '-') {
-                        std::string e("error, flag '-" + key +
-                                        "' requires an argument.");
-                        error(e);
-                    }
-                    if (m_options[m_opt_map[key].pos].mode() ==
-                        store_value) {
-                        m_values[m_opt_map[key].name].clear();
-                        m_values[m_opt_map[key].name].push_back(next_arg);
-                        m_options[m_opt_map[key].pos].found() = true;
-                    } else {
+                    m_values[m_opt_map[key].name].push_back( arguments[arg].substr(i + 1));
+                    m_options[m_opt_map[key].pos].found() = true;
+                    return true;
+                }
+                else 
+                {
+                    m_values[m_opt_map[key].name].push_back( arguments[arg].substr(i + 1));
+                    m_options[m_opt_map[key].pos].found() = true;
+                    if (++arg < arguments.size()) {
+                        auto next_arg = arguments[arg];
                         while (next_arg[0] != '-') {
+                            m_values[m_opt_map[key].name].push_back(  next_arg);
 
-                            m_values[m_opt_map[key].name].push_back(
-                                next_arg);
                             if (++arg >= arguments.size()) {
                                 break;
                             }
                             next_arg = arguments[arg];
                         }
-                        m_options[m_opt_map[key].pos].found() = true;
                         arg--;
                     }
+                    return true;
                 }
-                break;
             }
+            else // case where theres a space until the next args.
+            {
+                if (++arg >= arguments.size()) {
 
-            bool bool_flag = (without_val.count(key) > 0);
-            if (bool_flag) {
-                m_options[m_opt_map[key].pos].found() = true;
-            } else {
-                error("Invalid flag '-" + key + "'");
+                    error("error, flag '-" + key +  "' requires at least one argument.");
+                }
+                auto next_arg = arguments[arg];
+                if (next_arg[0] == '-') {
+
+                    error("error, flag '-" + key + "' requires an argument.");
+                }
+                m_values[m_opt_map[key].name].clear();
+                if (m_options[m_opt_map[key].pos].mode() == store_value) {
+
+                    m_values[m_opt_map[key].name].push_back(next_arg);
+                    m_options[m_opt_map[key].pos].found() = true;
+                    return true;
+                } 
+                else 
+                {
+                    while (next_arg[0] != '-') {
+
+                        m_values[m_opt_map[key].name].push_back( next_arg);
+                        if (++arg >= arguments.size()) {
+                            break;
+                        }
+                        next_arg = arguments[arg];
+                    }
+                    m_options[m_opt_map[key].pos].found() = true;
+                    arg--;
+                }
             }
+            return true;
         }
-        return true;
+
+
+        if (without_val.count(key) > 0) {
+            m_options[m_opt_map[key].pos].found() = true;
+        } else {
+            error("Invalid flag '-" + key + "'");
+        }
     }
+    return true;
+
 }
 
 void parser::eat_arguments(unsigned int argc, char const *argv[]) {
@@ -505,12 +500,12 @@ void parser::eat_arguments(unsigned int argc, char const *argv[]) {
         auto argument = arguments[arg];
         bool match_found = false;
 
-        match_found = try_to_get_long_args(arguments, arg);       
+        match_found = try_to_get_long_args(arguments, arg);
 
         if(match_found)
             continue;
 
-        match_found = try_to_get_short_args(arguments, argument, arg);   
+        match_found = try_to_get_short_args(arguments, arg);
 
         if (!match_found) {
             error("Unrecognized flag/option '" + argument + "'");
