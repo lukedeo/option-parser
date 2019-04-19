@@ -20,6 +20,8 @@ namespace optionparser {
 
 enum storage_mode { store_true, store_value, store_mult_values };
 
+enum option_type { long_opt = 0, short_opt, positional_opt, empty_opt };
+
 struct dict_entry {
     unsigned int pos;
     std::string name;
@@ -138,6 +140,11 @@ struct option {
     std::string m_help = "";
     std::string m_dest = "";
     std::string m_default_value = "";
+
+    static option_type get_type(std::string opt);
+    static std::string get_destination(std::string opt1, std::string opt2, option_type ft, option_type st);
+
+   
 };
 //----------------------------------------------------------------------------
 inline std::string remove_character(std::string str, char c = ' ');
@@ -145,6 +152,46 @@ inline std::string remove_character(std::string str, char c = ' ');
 typedef std::map<std::string, std::vector<std::string>> Archive;
 typedef std::map<std::string, dict_entry> Dictionary;
 
+option_type option::get_type(std::string opt)
+{
+    if (opt == "")
+        return option_type::empty_opt;
+
+    if (opt[0] == '-')
+    {
+        if (opt.size() == 2)
+            return option_type::short_opt;
+
+        else
+            return option_type::long_opt;
+
+    }
+    return option_type::positional_opt;
+}
+std::string option::get_destination(std::string first_option, std::string second_option, option_type first_opt_type, option_type second_opt_type)
+{
+    std::string dest;
+
+    if (first_opt_type == option_type::long_opt) {
+        dest =  remove_character(first_option, '-');
+
+    }
+    else if (second_opt_type == option_type::long_opt){
+        dest = remove_character(second_option, '-');
+    }
+    else
+    {
+        if (first_opt_type == option_type::short_opt) {
+        dest = remove_character(first_option, '-') + "_option";
+
+        }
+        else if (second_opt_type == option_type::short_opt){
+            dest = remove_character(second_option, '-') + "_option";
+        }
+    }
+
+    return dest;
+}
 //-----------------------------------------------------------------------------
 //  Parser Class
 //-----------------------------------------------------------------------------
@@ -162,8 +209,7 @@ class parser {
 
     void eat_arguments(unsigned int argc, char const *argv[]);
 
-    option &add_option(std::string longoption, std::string shortoption);
-    option &add_option(std::string opt);
+    option &add_option(std::string first_option, std::string second_option =  "");
 
     template <class T = bool> T get_value(std::string key);
 
@@ -181,51 +227,252 @@ class parser {
     std::unordered_set<std::string> with_val, without_val;
     Dictionary m_opt_map;
     std::map<std::string, unsigned int> idx;
+    bool get_mult_values(std::vector<std::string> &arguments,  std::string &argument, unsigned int &arg, option & opt);
+    bool get_value_arg(std::vector<std::string> &arguments,   unsigned int &arg, option &opt);
+    bool get_arg_with_value(std::vector<std::string> &arguments,   unsigned int &arg, option &opt);
+    
+    bool try_to_get_long_args(std::vector<std::string> &arguments,  unsigned int &arg);
+    bool try_to_get_short_args(std::vector<std::string> &arguments, unsigned int &arg );
 };
-//----------------------------------------------------------------------------
-option &parser::add_option(std::string longoption, std::string shortoption) {
-    return add_option_internal(longoption, shortoption);
+
+option &parser::add_option(std::string first_option, std::string second_option) {
+    return add_option_internal(first_option, second_option);
 }
-//----------------------------------------------------------------------------
-option &parser::add_option(std::string opt) {
-    if (opt[0] == '-') {
-        if (opt[1] == '-') {
-            return add_option_internal(opt, "");
-        }
-        if (opt.size() > 2) {
-            return add_option_internal(opt, "");
-        } else {
-            return add_option_internal("", opt);
-        }
-    }
-    error("Positional arguments such as '" + opt + "' aren't yet supported.");
-    return add_option_internal(opt, "");
-}
-//----------------------------------------------------------------------------
-option &parser::add_option_internal(std::string longoption,
-                                    std::string shortoption) {
+
+option &parser::add_option_internal(std::string first_option,  std::string second_option){
+
     m_options.resize(m_options.size() + 1);
-
     option &opt = m_options.back();
+    option_type first_option_type = option::get_type(first_option);
+    option_type second_option_type = option::get_type(second_option);
 
-    if (longoption != "") {
-        if (opt.m_dest == "") {
-            opt.m_dest = remove_character(longoption, '-');
-        }
-    } else {
-        if (opt.m_dest == "") {
-            opt.m_dest = remove_character(shortoption, '-') + "_option";
-        }
+    opt.m_dest = option::get_destination(first_option, second_option, first_option_type, second_option_type);
+
+    if (first_option_type == option_type::long_opt)
+    {
+        opt.long_flag() = first_option;
+    }
+    else if (second_option_type == option_type::long_opt) 
+    {
+        opt.long_flag() = second_option;
     }
 
-    opt.long_flag() = longoption;
-    opt.short_flag() = shortoption;
-    auto k = remove_character(shortoption, '-');
+    std::string k;
+    if (first_option_type == option_type::short_opt)
+    {
+        opt.short_flag() = first_option;
+        k = remove_character(first_option, '-');
+    }
+    else if (second_option_type == option_type::short_opt) 
+    {
+        opt.short_flag() = second_option;
+        k = remove_character(second_option, '-');
+    }
+
+
     m_opt_map[k].pos = m_options.size() - 1;
     m_opt_map[k].name = opt.m_dest;
     return opt;
 }
-//----------------------------------------------------------------------------
+
+bool parser::get_value_arg(std::vector<std::string> &arguments, unsigned int &arg, option &opt)
+{
+    std::string val = "";
+     m_values[opt.dest()].clear();
+    if (arguments[arg].size() > opt.long_flag().size()) 
+    {
+        auto search_pt = arguments[arg].find_first_of('=');
+        if (search_pt == std::string::npos) 
+        {
+            search_pt = arguments[arg].find_first_of(' ');
+            if (search_pt == std::string::npos) 
+            {
+                error("Error, long options (" + opt.long_flag() + ") require a '=' or space before a value.");
+                return false;
+            }
+          
+            m_values[opt.dest()].push_back( arguments[arg].substr(search_pt + 1));
+        }       
+    }
+
+    else
+    {
+        if (arg + 1 >= arguments.size())
+        {
+            if (opt.default_value() == "") 
+            {
+                error("error, flag '" + opt.long_flag() + "' requires an argument.");
+                return false;
+            }
+            if (m_values[opt.dest()].size() == 0)
+            {
+               val = opt.default_value();
+            }
+        }
+        else
+        {
+            if (arguments[arg + 1][0] == '-')
+            {
+                if (opt.default_value() == "")
+                {
+                    error("error, flag '" + opt.long_flag() + "' requires an argument.");
+                    return false;
+                }
+                if (m_values[opt.dest()].size() == 0)
+                {
+                val = opt.default_value();
+                }
+            }
+        }
+    }
+
+    if (val != "") 
+    {
+        m_values[opt.dest()].push_back(val);
+        return true;
+    }
+
+    while (arguments[arg + 1][0] != '-')
+    {
+        if (arg + 1 >= arguments.size()) {
+            break;
+        }
+
+        m_values[opt.dest()].push_back(arguments[arg + 1]);
+        arg++;
+    }
+
+    return true;
+}
+
+
+bool parser::try_to_get_long_args(std::vector<std::string> &arguments,  unsigned int &arg )
+{ 
+     for (auto &option : m_options) // for each option set
+    {
+        auto opt = option;
+
+        if (opt.long_flag() == "") 
+            continue;
+
+        if (arguments[arg][0] != '-') 
+            continue;
+
+        if (arguments[arg].size() == 1) 
+            error("A flag needs a letter...");
+
+        if (arguments[arg].find(opt.long_flag()) != 0) 
+            continue;
+
+        if (opt.mode() == store_true)
+        {
+            option.found() = true;
+            return true;
+        }
+
+        if (((opt.mode() == store_value) || (opt.mode() == store_mult_values))&&
+            (option.found() == false)) 
+        {
+            if(get_value_arg(arguments, arg, opt ))
+            {
+                option.found() = true;
+                return true;
+            }
+        }      
+        
+    }
+
+    return false;
+}
+
+bool parser::try_to_get_short_args(std::vector<std::string> &arguments,  unsigned int &arg )
+{
+    if (arguments[arg][0] != '-')
+        return false;
+
+    if(arguments[arg][1] == '-' )
+        return false;
+
+    for (unsigned int i = 1; i < arguments[arg].size(); ++i) 
+    {
+        std::string key(1, arguments[arg][i]);
+
+        if (with_val.count(key) > 0) 
+        {
+            m_values[m_opt_map[key].name].clear();    
+            if (arguments[arg].size() > (arguments[arg].find(key) + 1)) 
+            {
+                if (m_options[m_opt_map[key].pos].mode() == store_value) 
+                {
+                    m_values[m_opt_map[key].name].push_back( arguments[arg].substr(i + 1));
+                    m_options[m_opt_map[key].pos].found() = true;
+                    return true;
+                }
+                else 
+                {
+                    m_values[m_opt_map[key].name].push_back( arguments[arg].substr(i + 1));
+                    m_options[m_opt_map[key].pos].found() = true;
+                    if (++arg < arguments.size()) {
+                        auto next_arg = arguments[arg];
+                        while (next_arg[0] != '-') {
+                            m_values[m_opt_map[key].name].push_back(  next_arg);
+
+                            if (++arg >= arguments.size()) {
+                                break;
+                            }
+                            next_arg = arguments[arg];
+                        }
+                        arg--;
+                    }
+                    return true;
+                }
+            }
+            else // case where theres a space until the next args.
+            {
+                if (++arg >= arguments.size()) {
+
+                    error("error, flag '-" + key +  "' requires at least one argument.");
+                }
+                auto next_arg = arguments[arg];
+                if (next_arg[0] == '-') {
+
+                    error("error, flag '-" + key + "' requires an argument.");
+                }
+                m_values[m_opt_map[key].name].clear();
+                if (m_options[m_opt_map[key].pos].mode() == store_value) {
+
+                    m_values[m_opt_map[key].name].push_back(next_arg);
+                    m_options[m_opt_map[key].pos].found() = true;
+                    return true;
+                } 
+                else 
+                {
+                    while (next_arg[0] != '-') {
+
+                        m_values[m_opt_map[key].name].push_back( next_arg);
+                        if (++arg >= arguments.size()) {
+                            break;
+                        }
+                        next_arg = arguments[arg];
+                    }
+                    m_options[m_opt_map[key].pos].found() = true;
+                    arg--;
+                }
+            }
+            return true;
+        }
+
+
+        if (without_val.count(key) > 0) {
+            m_options[m_opt_map[key].pos].found() = true;
+        } else {
+            error("Invalid flag '-" + key + "'");
+        }
+    }
+    return true;
+
+}
+
 void parser::eat_arguments(unsigned int argc, char const *argv[]) {
     unsigned int idx_ctr = 0;
     for (auto &opt : m_options) {
@@ -253,234 +500,18 @@ void parser::eat_arguments(unsigned int argc, char const *argv[]) {
         auto argument = arguments[arg];
         bool match_found = false;
 
-        for (auto &option : m_options) // for each option set
-        {
-            auto opt = option;
+        match_found = try_to_get_long_args(arguments, arg);
 
-            if (opt.long_flag() == "") {
-                continue;
-            }
+        if(match_found)
+            continue;
 
-            if (argument[0] == '-') {
-                if (argument.size() == 1) {
-                    error("A flag needs a letter...");
-                }
-                if (argument.find(opt.long_flag()) == 0) {
-                    if (opt.mode() == store_true) {
-                        option.found() = true;
-                        match_found = true;
-                        break;
-                    }
+        match_found = try_to_get_short_args(arguments, arg);
 
-                    if (argument.size() > opt.long_flag().size()) {
-                        option.found() = false;
-                        if (opt.mode() != store_true) {
-                            auto search_pt = argument.find_first_of('=');
-                            if (search_pt == std::string::npos) {
-                                std::string e = "Error, long options (";
-                                e += opt.long_flag();
-                                e += ") require a '=' or space before a value.";
-                                error(e);
-                            }
-                            std::string val = argument.substr(search_pt + 1);
-                            if (val == "") {
-                                std::string e = "Error, argument needed";
-                                error(e + " after '='.");
-                            }
-                            if (opt.mode() == store_value) {
-                                m_values[opt.dest()].clear();
-                                m_values[opt.dest()].push_back(val);
-                            } else {
-                                m_values[opt.dest()].push_back(val);
-                                if (++arg < arguments.size()) {
-                                    auto next_arg = arguments[arg];
-                                    while (next_arg[0] != '-') {
-                                        m_values[opt.dest()].push_back(
-                                            next_arg);
-
-                                        if (++arg >= arguments.size()) {
-                                            break;
-                                        }
-                                        next_arg = arguments[arg];
-                                    }
-                                    arg--;
-                                }
-                            }
-                            option.found() = true;
-                            match_found = true;
-                            break;
-                        } else {
-                            std::string e = "Error, value passed to flag '";
-                            e += opt.long_flag();
-                            error(e + "', which takes no values.");
-                        }
-                    }
-
-                    if ((opt.mode() == store_value) &&
-                        (option.found() == false)) {
-                        bool skip = false;
-                        if (++arg >= arguments.size()) {
-                            if (opt.default_value() == "") {
-                                std::string e("error, flag '" +
-                                              opt.long_flag() +
-                                              "' requires an argument.");
-                                error(e);
-                            }
-                            skip = true;
-                            if (m_values[opt.dest()].size() == 0) {
-                                m_values[opt.dest()].push_back(
-                                    opt.default_value());
-                            }
-                        }
-                        std::string next_arg;
-                        if (!skip) {
-                            next_arg = arguments[arg];
-                            if (next_arg[0] != '-') {
-                                m_values[opt.dest()].clear();
-                                m_values[opt.dest()].push_back(next_arg);
-                            } else {
-                                if (m_values[opt.dest()].size() == 0) {
-                                    m_values[opt.dest()].push_back(
-                                        opt.default_value());
-                                }
-                            }
-                        }
-                        option.found() = true;
-                        match_found = true;
-                        break;
-                    }
-                    if ((opt.mode() == store_mult_values) &&
-                        (option.found() == false)) {
-                        bool skip = false;
-                        if (++arg >= arguments.size()) {
-                            if (opt.default_value() == "") {
-                                std::string e("error, flag '" +
-                                              opt.long_flag() +
-                                              "' requires an argument.");
-                                error(e);
-                            }
-                            skip = true;
-                            if (m_values[opt.dest()].size() == 0) {
-                                m_values[opt.dest()].push_back(
-                                    opt.default_value());
-                            }
-                        }
-                        if (!skip) {
-                            auto next_arg = arguments[arg];
-                            if (next_arg[0] == '-') {
-                                if ((opt.default_value() == "") &&
-                                    (m_values[opt.dest()].size() == 0)) {
-                                    std::string e(
-                                        "error, flag '" + opt.long_flag() +
-                                        "' requires at least one argument.");
-                                    error(e);
-                                }
-                                if ((opt.default_value() != "") &&
-                                    (m_values[opt.dest()].size() == 0)) {
-                                    m_values[opt.dest()].push_back(
-                                        opt.default_value());
-                                }
-                            }
-                            while (next_arg[0] != '-') {
-
-                                m_values[opt.dest()].push_back(next_arg);
-                                if (++arg >= arguments.size()) {
-                                    break;
-                                }
-                                next_arg = arguments[arg];
-                            }
-                            arg--;
-                            option.found() = true;
-                            match_found = true;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        if ((argument[0] == '-') && !(match_found) && (argument[1] != '-')) {
-            for (unsigned int i = 1; i < argument.size(); ++i) {
-                std::string key(1, argument[i]);
-                bool value_flag = (with_val.count(key) > 0);
-                if (value_flag) {
-                    auto crit_pos = argument.find(key);
-                    if (argument.size() > (crit_pos + 1)) {
-                        if (m_options[m_opt_map[key].pos].mode() ==
-                            store_value) {
-                            m_values[m_opt_map[key].name].clear();
-                            m_values[m_opt_map[key].name].push_back(
-                                argument.substr(i + 1));
-
-                            m_options[m_opt_map[key].pos].found() = true;
-                            break;
-                        } else {
-                            m_values[m_opt_map[key].name].push_back(
-                                argument.substr(i + 1));
-
-                            m_options[m_opt_map[key].pos].found() = true;
-                            if (++arg < arguments.size()) {
-                                auto next_arg = arguments[arg];
-                                while (next_arg[0] != '-') {
-                                    m_values[m_opt_map[key].name].push_back(
-                                        next_arg);
-
-                                    if (++arg >= arguments.size()) {
-                                        break;
-                                    }
-                                    next_arg = arguments[arg];
-                                }
-                                arg--;
-                            }
-                            break;
-                        }
-                    } else // case where theres a space until the next args.
-                    {
-                        if (++arg >= arguments.size()) {
-                            std::string e("error, flag '-" + key +
-                                          "' requires at least one argument.");
-                            error(e);
-                        }
-                        auto next_arg = arguments[arg];
-                        if (next_arg[0] == '-') {
-                            std::string e("error, flag '-" + key +
-                                          "' requires an argument.");
-                            error(e);
-                        }
-                        if (m_options[m_opt_map[key].pos].mode() ==
-                            store_value) {
-                            m_values[m_opt_map[key].name].clear();
-                            m_values[m_opt_map[key].name].push_back(next_arg);
-                            m_options[m_opt_map[key].pos].found() = true;
-                        } else {
-                            while (next_arg[0] != '-') {
-
-                                m_values[m_opt_map[key].name].push_back(
-                                    next_arg);
-                                if (++arg >= arguments.size()) {
-                                    break;
-                                }
-                                next_arg = arguments[arg];
-                            }
-                            m_options[m_opt_map[key].pos].found() = true;
-                            arg--;
-                        }
-                    }
-                    break;
-                }
-
-                bool bool_flag = (without_val.count(key) > 0);
-                if (bool_flag) {
-                    m_options[m_opt_map[key].pos].found() = true;
-                } else {
-                    error("Invalid flag '-" + key + "'");
-                }
-            }
-            match_found = true;
-        }
         if (!match_found) {
             error("Unrecognized flag/option '" + argument + "'");
         }
     }
+
     if (get_value("help")) {
         help();
     }
@@ -638,11 +669,19 @@ std::vector<int> parser::get_value<std::vector<int>>(std::string key) {
 }
 //----------------------------------------------------------------------------
 inline std::string remove_character(std::string str, const char c) {
-    std::string::iterator end_pos = std::remove(str.begin(), str.end(), c);
-    str.erase(end_pos, str.end());
+    //dummy way to remove -- and - from args
+    auto pos = str.find("--");
+
+    if (pos == 0)
+        str.erase(0, 2);
+
+    pos = str.find('-');
+    if (pos == 0)
+        str.erase(0, 1);
+
     return str;
 }
 
 } // end namespace
 
-#endif
+#endif 
