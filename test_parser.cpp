@@ -36,38 +36,39 @@ TEST_CASE("test parser functionality") {
 
   int argc = length(argv);
 
-  optionparser::parser p("A test to make sure that this option parser works");
+  optionparser::OptionParser p(
+      "A test to make sure that this option parser works");
 
   p.add_option("--flag", "-f").help("just flag");
   p.add_option("--boolean", "-b")
       .help("boolean")
-      .mode(optionparser::store_true);
+      .mode(optionparser::StorageMode::STORE_TRUE);
 
   p.add_option("--only_large").help("set only large opt");
   p.add_option("-singledash")
       .help("singledash")
-      .mode(optionparser::store_value);
+      .mode(optionparser::StorageMode::STORE_VALUE);
   p.add_option("-s").help("set only small opt");
   p.add_option("-q", "--first_short1")
       .help("first_short1")
-      .mode(optionparser::store_value);
+      .mode(optionparser::StorageMode::STORE_VALUE);
   p.add_option("-w", "--first_short2").help("first_short2");
   p.add_option("--in-fil-e", "-i").help("dashes in name");
   p.add_option("-dash").help("only one dash for large opt");
   p.add_option("--store_str", "-v")
       .help("store single str val")
-      .mode(optionparser::store_value)
+      .mode(optionparser::StorageMode::STORE_VALUE)
       .default_value("stor str def1");
   p.add_option("--store_num", "-n")
       .help("store single num val")
-      .mode(optionparser::store_value);
+      .mode(optionparser::StorageMode::STORE_VALUE);
   p.add_option("--store_multy_s", "-m")
       .help("store multy str val")
-      .mode(optionparser::store_mult_values)
+      .mode(optionparser::StorageMode::STORE_MULT_VALUES)
       .default_value("def2");
   p.add_option("--pp", "-p")
       .help("store single str val")
-      .mode(optionparser::store_value)
+      .mode(optionparser::StorageMode::STORE_VALUE)
       .default_value("p1");
 
   p.eat_arguments(argc, argv);
@@ -130,16 +131,15 @@ TEST_CASE("test OO functionality") {
 
   auto argc = length(argv);
 
-  optionparser::parser p("A test to make sure that this option parser works");
+  optionparser::OptionParser p(
+      "A test to make sure that this option parser works");
 
   p.add_option("--flag", "-f")
       .help("just=flag")
-      .mode(optionparser::store_mult_values);
-  ;
+      .mode(optionparser::StorageMode::STORE_MULT_VALUES);
   p.add_option("--boolean", "-b")
       .help("boolean")
-      .mode(optionparser::store_true);
-
+      .mode(optionparser::StorageMode::STORE_TRUE);
   p.eat_arguments(argc, argv);
 
   bool check_is_flag_set = false;
@@ -158,11 +158,12 @@ TEST_CASE_TEMPLATE("test typecasting functionality", T, int, double,
 
   auto argc = length(argv);
 
-  optionparser::parser p("A test to make sure that this option parser works");
+  optionparser::OptionParser p(
+      "A test to make sure that this option parser works");
 
   p.add_option("--flag", "-f")
       .help("just=flag")
-      .mode(optionparser::store_value);
+      .mode(optionparser::StorageMode::STORE_VALUE);
 
   p.eat_arguments(argc, argv);
 
