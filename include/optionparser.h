@@ -1,10 +1,11 @@
 //-----------------------------------------------------------------------------
-//  parser.hh -- A Header-Only commandline argument parser
-//  Author: Luke de Oliveira <lukedeo@vaitech.io>
+//  optionparser.h -- A Header-Only commandline argument parser
+//  Author: Luke de Oliveira <lukedeo@ldo.io>
+//  License: MIT
 //-----------------------------------------------------------------------------
 
-#ifndef PARSER__HH
-#define PARSER__HH
+#ifndef OPTIONPARSER_H_
+#define OPTIONPARSER_H_
 
 #include <stdlib.h>
 #include <algorithm>
@@ -113,10 +114,14 @@ std::string remove_character(std::string str, const char c) {
   // dummy way to remove -- and - from args
   auto pos = str.find("--");
 
-  if (pos == 0) str.erase(0, 2);
+  if (pos == 0) {
+    str.erase(0, 2);
+  }
 
   pos = str.find('-');
-  if (pos == 0) str.erase(0, 1);
+  if (pos == 0) {
+    str.erase(0, 1);
+  }
 
   return str;
 }
@@ -421,7 +426,6 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
   }
 
   // for each argument cluster
-
   for (unsigned int arg = 0; arg < arguments.size(); ++arg) {
     auto argument = arguments[arg];
     bool match_found = false;

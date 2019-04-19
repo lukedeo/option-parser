@@ -1,13 +1,12 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-
 #include <iterator>
 
 #include "doctest/doctest.h"
-#include "include/parser.hh"
+#include "include/optionparser.h"
 
-template <typename T>
-int length(T const &x) {
-  return std::distance(std::begin(x), std::end(x));
+template <class T, size_t N>
+constexpr size_t length(T (&)[N]) {
+  return N;
 }
 
 TEST_CASE("test parser functionality") {
@@ -150,6 +149,28 @@ TEST_CASE("test OO functionality") {
     CHECK(names[1] == "bsadsad");
     CHECK(names[2] == "bqwewqeq");
   }
+}
+
+TEST_CASE("test default argument not passed") {
+  const char *argv[] = {"tests"};
+
+  auto argc = length(argv);
+
+  optionparser::OptionParser p("");
+
+  p.add_option("--flag", "-f")
+      .help("just=flag")
+      .mode(optionparser::StorageMode::STORE_MULT_VALUES)
+      .default_value("foo");
+  p.eat_arguments(argc, argv);
+
+  CHECK(p.get_value("flag"));
+  CHECK(p.get_value<std::string>("flag") == "foo");
+
+  auto v = p.get_value<std::vector<std::string>>("flag");
+
+  CHECK(v.size() == 1);
+  CHECK(v[0] == "foo");
 }
 
 TEST_CASE_TEMPLATE("test typecasting functionality", T, int, double,
