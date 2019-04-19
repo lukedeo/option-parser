@@ -15,7 +15,7 @@ int main(int argc, char const *argv[]) {
 
   p.add_option("--number", "-n")
       .help("A number to do something with")
-      .default(42)
+      .default_value(42)
       .mode(optionparser::StorageMode::STORE_VALUE);
 
   p.add_option("--file")
