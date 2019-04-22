@@ -291,12 +291,12 @@ bool OptionParser::get_value_arg(std::vector<std::string> &arguments,
   }
 
   while (arguments[arg + 1][0] != '-') {
+    arg++;
+    m_values[opt.dest()].push_back(arguments[arg]);
     if (arg + 1 >= arguments.size()) {
       break;
     }
 
-    m_values[opt.dest()].push_back(arguments[arg + 1]);
-    arg++;
   }
 
   return true;

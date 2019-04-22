@@ -31,7 +31,8 @@ TEST_CASE("test parser functionality") {
                         "-b",
                         "--pp",
                         "-singledash",
-                        "hellooo"};
+                        "hellooo",
+                        "--boolean"};
 
   int argc = length(argv);
 
@@ -126,7 +127,7 @@ TEST_CASE("test parser functionality") {
 }
 
 TEST_CASE("test OO functionality") {
-  const char *argv[] = {"tests", "--flag asdsaflag", "bsadsad", "bqwewqeq"};
+  const char *argv[] = {"tests", "--flag asdsaflag", "bsadsad", "bqwewqeq", "--boolean"};
 
   auto argc = length(argv);
 
@@ -152,7 +153,7 @@ TEST_CASE("test OO functionality") {
 }
 
 TEST_CASE("test default argument not passed") {
-  const char *argv[] = {"tests"};
+  const char *argv[] = {"tests", "--flag"};
 
   auto argc = length(argv);
 
