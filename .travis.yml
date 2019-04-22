@@ -1,0 +1,9 @@
+os:
+  - linux
+  - osx
+compiler: clang
+language: cpp
+dist: trusty
+script:
+  - $CXX -std=c++11 -I ./ tests/test_parser.cc -o run-test
+  - ./run-test
