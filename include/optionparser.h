@@ -196,8 +196,7 @@ class OptionParser {
   Archive m_values;
   std::vector<Option> m_options;
   std::string m_prog_name, m_description;
-  std::unordered_set<std::string> with_val, without_val;
-  Dictionary m_opt_map;
+
   std::map<std::string, unsigned int> idx;
   bool get_mult_values(std::vector<std::string> &arguments,
                        std::string &argument, unsigned int &arg, Option &opt);
@@ -241,8 +240,7 @@ Option &OptionParser::add_option_internal(std::string first_option,
     k = remove_character(second_option, '-');
   }
 
-  m_opt_map[k].pos = m_options.size() - 1;
-  m_opt_map[k].name = opt.m_dest;
+
   return opt;
 }
 
@@ -359,19 +357,11 @@ bool OptionParser::try_to_get_opt(std::vector<std::string> &arguments,
 
 
 void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
+  
   unsigned int idx_ctr = 0;
   for (auto &opt : m_options) {
     idx[opt.m_dest] = idx_ctr;
-    if (opt.short_flag() != "") {
-      auto shortflag = opt.short_flag();
-      if (opt.mode() != STORE_TRUE) {
-        with_val.insert(remove_character(shortflag, '-'));
-      } else {
-        without_val.insert(remove_character(shortflag, '-'));
-      }
-      m_opt_map[remove_character(shortflag, '-')].name = opt.dest();
-    }
-    ++idx_ctr;
+    idx_ctr++;
   }
   m_prog_name = argv[0];
   std::vector<std::string> arguments;
@@ -382,8 +372,6 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
   // for each argument cluster
   for (unsigned int arg = 0; arg < arguments.size(); ++arg)
    {
-    auto argument = arguments[arg];
-
     bool match_found = false;
     for (auto &option : m_options)  // for each option set
     {
@@ -399,8 +387,8 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
     }
 
     if (!match_found) {
-      if(argument != ARGS_END)
-        error("Unrecognized flag/option '" + argument + "'");
+      if(arguments[arg] != ARGS_END)
+        error("Unrecognized flag/option '" + arguments[arg] + "'");
     }
   }
 
