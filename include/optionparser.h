@@ -17,6 +17,8 @@
 #include <unordered_set>
 #include <vector>
 
+const std::string ARGS_END =  "- ";
+
 namespace optionparser {
 
 enum StorageMode { STORE_TRUE, STORE_VALUE, STORE_MULT_VALUES };
@@ -200,14 +202,13 @@ class OptionParser {
   bool get_mult_values(std::vector<std::string> &arguments,
                        std::string &argument, unsigned int &arg, Option &opt);
   bool get_value_arg(std::vector<std::string> &arguments, unsigned int &arg,
-                     Option &opt, bool is_short = false);
+                     Option &opt, std::string &flag);
   bool get_arg_with_value(std::vector<std::string> &arguments,
                           unsigned int &arg, Option &opt);
 
-  bool try_to_get_long_args(std::vector<std::string> &arguments,
-                            unsigned int &arg);
-  bool try_to_get_short_args(std::vector<std::string> &arguments,
-                             unsigned int &arg);
+  bool try_to_get_opt(std::vector<std::string> &arguments,
+                            unsigned int &arg, Option & option, std::string &flag);
+
 };
 
 Option &OptionParser::add_option(std::string first_option,
@@ -260,18 +261,9 @@ std::vector<std::string> split_str(std::string s, std::string delimiter = " ")
 }
 
 bool OptionParser::get_value_arg(std::vector<std::string> &arguments,
-                                 unsigned int &arg, Option &opt, bool is_short) {
+                                 unsigned int &arg, Option &opt, std::string & flag) {
 
-  std::string flag = "";
-
-  if (is_short)
-  { 
-    flag = opt.short_flag();
-  } 
-  else 
-  {
-    flag = opt.long_flag();
-  } 
+ 
 
   std::string val = "";
   m_values[opt.dest()].clear();
@@ -336,17 +328,16 @@ bool OptionParser::get_value_arg(std::vector<std::string> &arguments,
   return true;
 }
 
-bool OptionParser::try_to_get_long_args(std::vector<std::string> &arguments,
-                                        unsigned int &arg) {
-  for (auto &option : m_options)  // for each option set
-  {
-    if (option.long_flag() == "") continue;
+bool OptionParser::try_to_get_opt(std::vector<std::string> &arguments,
+                                        unsigned int &arg, Option & option, std::string& flag) {
 
-    if (arguments[arg][0] != '-') continue;
+    if (flag== "") return false;
+
+    if (arguments[arg][0] != '-') return false;;
 
     if (arguments[arg].size() == 1) error("A flag needs a letter...");
 
-    if (arguments[arg].find(option.long_flag()) != 0) continue;
+    if (arguments[arg].find(flag) != 0) return false;;
 
     if (option.mode() == STORE_TRUE) {
       option.found() = true;
@@ -355,47 +346,17 @@ bool OptionParser::try_to_get_long_args(std::vector<std::string> &arguments,
 
     if (((option.mode() == STORE_VALUE) || (option.mode() == STORE_MULT_VALUES)) &&
         (option.found() == false)) {
-      if (get_value_arg(arguments, arg, option)) {
+      
+      if (get_value_arg(arguments, arg, option, flag)) {
         option.found() = true;
         return true;
       }
     }
-  }
+
 
   return false;
 }
 
-bool OptionParser::try_to_get_short_args(std::vector<std::string> &arguments,
-                                         unsigned int &arg) {
-
-
-  for (auto &option : m_options)  // for each option set
-  {
-    if (option.short_flag() == "") continue;
-
-    if (arguments[arg][0] != '-') continue;
-    if (arguments[arg][1] == '-') continue;
-
-    if (arguments[arg].find(option.short_flag()) != 0) continue;
-
-    if (option.mode() == STORE_TRUE) {
-      option.found() = true;
-      return true;
-    }
-
-    if (((option.mode() == STORE_VALUE) || (option.mode() == STORE_MULT_VALUES)) &&
-        (option.found() == false)) {
-      if (get_value_arg(arguments, arg, option, true)) {
-        option.found() = true;
-        return true;
-      }
-    }
-  }
-
-
-   
-  return true;
-}
 
 void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
   unsigned int idx_ctr = 0;
@@ -417,20 +378,29 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
   for (unsigned int i = 1; i < argc; ++i) {
     arguments.push_back(argv[i]);
   }
-  arguments.push_back("- ");// dummy way to solve problem with last arg of type "arg val1 val2"
+  arguments.push_back(ARGS_END);// dummy way to solve problem with last arg of type "arg val1 val2"
   // for each argument cluster
-  for (unsigned int arg = 0; arg < arguments.size(); ++arg) {
+  for (unsigned int arg = 0; arg < arguments.size(); ++arg)
+   {
     auto argument = arguments[arg];
+
     bool match_found = false;
+    for (auto &option : m_options)  // for each option set
+    {
+      match_found = try_to_get_opt(arguments, arg, option, option.long_flag());
 
-    match_found = try_to_get_long_args(arguments, arg);
+      if (match_found)
+        break;
 
-    if (match_found) continue;
+      match_found = try_to_get_opt(arguments, arg, option, option.short_flag());
 
-    match_found = try_to_get_short_args(arguments, arg);
+      if (match_found)
+        break;
+    }
 
     if (!match_found) {
-      error("Unrecognized flag/option '" + argument + "'");
+      if(argument != ARGS_END)
+        error("Unrecognized flag/option '" + argument + "'");
     }
   }
 
