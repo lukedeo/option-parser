@@ -200,7 +200,7 @@ class OptionParser {
   bool get_mult_values(std::vector<std::string> &arguments,
                        std::string &argument, unsigned int &arg, Option &opt);
   bool get_value_arg(std::vector<std::string> &arguments, unsigned int &arg,
-                     Option &opt);
+                     Option &opt, bool is_short = false);
   bool get_arg_with_value(std::vector<std::string> &arguments,
                           unsigned int &arg, Option &opt);
 
@@ -245,28 +245,62 @@ Option &OptionParser::add_option_internal(std::string first_option,
   return opt;
 }
 
+std::vector<std::string> split_str(std::string s, std::string delimiter = " ")
+{
+    size_t pos = 0;
+    std::string token;
+    std::vector<std::string> vals;
+    while ((pos = s.find(delimiter)) != std::string::npos) {
+        token = s.substr(0, pos);
+        vals.push_back(token);
+        s.erase(0, pos + delimiter.length());
+    }
+   vals.push_back(s);
+   return vals;
+}
+
 bool OptionParser::get_value_arg(std::vector<std::string> &arguments,
-                                 unsigned int &arg, Option &opt) {
+                                 unsigned int &arg, Option &opt, bool is_short) {
+
+  std::string flag = "";
+
+  if (is_short)
+  { 
+    flag = opt.short_flag();
+  } 
+  else 
+  {
+    flag = opt.long_flag();
+  } 
+
   std::string val = "";
   m_values[opt.dest()].clear();
-  if (arguments[arg].size() > opt.long_flag().size()) {
+  if (arguments[arg].size() > flag.size()) {
     auto search_pt = arguments[arg].find_first_of('=');
+  
+
     if (search_pt == std::string::npos) {
+
       search_pt = arguments[arg].find_first_of(' ');
+             
       if (search_pt == std::string::npos) {
-        error("Error, long options (" + opt.long_flag() +
+        error("Error, long options (" +flag +
               ") require a '=' or space before a value.");
         return false;
       }
-
-      m_values[opt.dest()].push_back(arguments[arg].substr(search_pt + 1));
+      auto vals =  split_str(arguments[arg].substr(search_pt + 1));
+      for (auto v : vals) 
+          m_values[opt.dest()].push_back(v);
+    
+    
+      
     }
   }
 
   else {
     if (arg + 1 >= arguments.size()) {
       if (opt.default_value() == "") {
-        error("error, flag '" + opt.long_flag() + "' requires an argument.");
+        error("error, flag '" +flag + "' requires an argument.");
         return false;
       }
       if (m_values[opt.dest()].size() == 0) {
@@ -275,7 +309,7 @@ bool OptionParser::get_value_arg(std::vector<std::string> &arguments,
     } else {
       if (arguments[arg + 1][0] == '-') {
         if (opt.default_value() == "") {
-          error("error, flag '" + opt.long_flag() + "' requires an argument.");
+          error("error, flag '" + flag + "' requires an argument.");
           return false;
         }
         if (m_values[opt.dest()].size() == 0) {
@@ -340,8 +374,7 @@ bool OptionParser::try_to_get_short_args(std::vector<std::string> &arguments,
     if (option.short_flag() == "") continue;
 
     if (arguments[arg][0] != '-') continue;
-
-    if (arguments[arg].size() != 2) error("invlaid size of short arg...");
+    if (arguments[arg][1] == '-') continue;
 
     if (arguments[arg].find(option.short_flag()) != 0) continue;
 
@@ -352,7 +385,7 @@ bool OptionParser::try_to_get_short_args(std::vector<std::string> &arguments,
 
     if (((option.mode() == STORE_VALUE) || (option.mode() == STORE_MULT_VALUES)) &&
         (option.found() == false)) {
-      if (get_value_arg(arguments, arg, option)) {
+      if (get_value_arg(arguments, arg, option, true)) {
         option.found() = true;
         return true;
       }
@@ -360,7 +393,7 @@ bool OptionParser::try_to_get_short_args(std::vector<std::string> &arguments,
   }
 
 
-  
+   
   return true;
 }
 
@@ -384,7 +417,7 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
   for (unsigned int i = 1; i < argc; ++i) {
     arguments.push_back(argv[i]);
   }
-
+  arguments.push_back("- ");// dummy way to solve problem with last arg of type "arg val1 val2"
   // for each argument cluster
   for (unsigned int arg = 0; arg < arguments.size(); ++arg) {
     auto argument = arguments[arg];

@@ -127,7 +127,7 @@ TEST_CASE("test parser functionality") {
 }
 
 TEST_CASE("test OO functionality") {
-  const char *argv[] = {"tests", "--flag asdsaflag", "bsadsad", "bqwewqeq", "--boolean"};
+  const char *argv[] = {"tests", "--flag asdsaflag", "bsadsad", "bqwewqeq", "--boolean", "--long l1 l2 l3"};
 
   auto argc = length(argv);
 
@@ -135,6 +135,9 @@ TEST_CASE("test OO functionality") {
       "A test to make sure that this option parser works");
 
   p.add_option("--flag", "-f")
+      .help("just=flag")
+      .mode(optionparser::StorageMode::STORE_MULT_VALUES);
+  p.add_option("--long", "-l")
       .help("just=flag")
       .mode(optionparser::StorageMode::STORE_MULT_VALUES);
   p.add_option("--boolean", "-b")
@@ -149,6 +152,13 @@ TEST_CASE("test OO functionality") {
     CHECK(names[0] == "asdsaflag");
     CHECK(names[1] == "bsadsad");
     CHECK(names[2] == "bqwewqeq");
+  }
+  if (p.get_value("long")) {
+    check_is_flag_set = true;
+    auto names = p.get_value<std::vector<std::string>>("long");
+    CHECK(names[0] == "l1");
+    CHECK(names[1] == "l2");
+    CHECK(names[2] == "l3");
   }
 }
 
@@ -194,4 +204,48 @@ TEST_CASE_TEMPLATE("test typecasting functionality", T, int, double,
   auto value = p.get_value<T>("flag");
 
   CHECK(typeid(value) == typeid(T));
+}
+
+
+TEST_CASE("test short args") {
+  const char *argv[] = {"tests",  "-s", "test_str", "-m", "str1", "str2", "str3",  "-b",  "-l t1 t2 t3"};
+
+  auto argc = length(argv);
+
+  optionparser::OptionParser p(
+      "A test to make sure that this option parser works");
+
+  p.add_option("-b")
+      .help("just=flag")
+      .mode(optionparser::StorageMode::STORE_TRUE);
+  p.add_option("-s")
+      .help("just=flag")
+      .mode(optionparser::StorageMode::STORE_VALUE);
+  p.add_option("-m")
+      .help("just=flag")
+      .mode(optionparser::StorageMode::STORE_MULT_VALUES);
+  p.add_option("-l")
+      .help("just=flag")
+      .mode(optionparser::StorageMode::STORE_MULT_VALUES);
+
+  p.eat_arguments(argc, argv);
+  CHECK(p.get_value("b_option"));
+
+
+  CHECK( p.get_value<std::string>("s_option") == "test_str");
+
+  auto names = p.get_value<std::vector<std::string>>("m_option");
+  CHECK(names[0] == "str1");
+  CHECK(names[1] == "str2");
+  CHECK(names[2] == "str3");
+
+  auto qq = p.get_value<std::vector<std::string>>("l_option");
+  CHECK(qq[0] == "t1");
+  CHECK(qq[1] == "t2");
+  CHECK(qq[2] == "t3");
+  
+
+
+
+
 }
