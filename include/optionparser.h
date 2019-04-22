@@ -306,24 +306,22 @@ bool OptionParser::try_to_get_long_args(std::vector<std::string> &arguments,
                                         unsigned int &arg) {
   for (auto &option : m_options)  // for each option set
   {
-    auto opt = option;
-
-    if (opt.long_flag() == "") continue;
+    if (option.long_flag() == "") continue;
 
     if (arguments[arg][0] != '-') continue;
 
     if (arguments[arg].size() == 1) error("A flag needs a letter...");
 
-    if (arguments[arg].find(opt.long_flag()) != 0) continue;
+    if (arguments[arg].find(option.long_flag()) != 0) continue;
 
-    if (opt.mode() == STORE_TRUE) {
+    if (option.mode() == STORE_TRUE) {
       option.found() = true;
       return true;
     }
 
-    if (((opt.mode() == STORE_VALUE) || (opt.mode() == STORE_MULT_VALUES)) &&
+    if (((option.mode() == STORE_VALUE) || (option.mode() == STORE_MULT_VALUES)) &&
         (option.found() == false)) {
-      if (get_value_arg(arguments, arg, opt)) {
+      if (get_value_arg(arguments, arg, option)) {
         option.found() = true;
         return true;
       }
@@ -335,72 +333,34 @@ bool OptionParser::try_to_get_long_args(std::vector<std::string> &arguments,
 
 bool OptionParser::try_to_get_short_args(std::vector<std::string> &arguments,
                                          unsigned int &arg) {
-  if (arguments[arg][0] != '-') return false;
 
-  if (arguments[arg][1] == '-') return false;
 
-  for (unsigned int i = 1; i < arguments[arg].size(); ++i) {
-    std::string key(1, arguments[arg][i]);
+  for (auto &option : m_options)  // for each option set
+  {
+    if (option.short_flag() == "") continue;
 
-    if (with_val.count(key) > 0) {
-      m_values[m_opt_map[key].name].clear();
-      if (arguments[arg].size() > (arguments[arg].find(key) + 1)) {
-        if (m_options[m_opt_map[key].pos].mode() == STORE_VALUE) {
-          m_values[m_opt_map[key].name].push_back(arguments[arg].substr(i + 1));
-          m_options[m_opt_map[key].pos].found() = true;
-          return true;
-        } else {
-          m_values[m_opt_map[key].name].push_back(arguments[arg].substr(i + 1));
-          m_options[m_opt_map[key].pos].found() = true;
-          if (++arg < arguments.size()) {
-            auto next_arg = arguments[arg];
-            while (next_arg[0] != '-') {
-              m_values[m_opt_map[key].name].push_back(next_arg);
+    if (arguments[arg][0] != '-') continue;
 
-              if (++arg >= arguments.size()) {
-                break;
-              }
-              next_arg = arguments[arg];
-            }
-            arg--;
-          }
-          return true;
-        }
-      } else  // case where theres a space until the next args.
-      {
-        if (++arg >= arguments.size()) {
-          error("error, flag '-" + key + "' requires at least one argument.");
-        }
-        auto next_arg = arguments[arg];
-        if (next_arg[0] == '-') {
-          error("error, flag '-" + key + "' requires an argument.");
-        }
-        m_values[m_opt_map[key].name].clear();
-        if (m_options[m_opt_map[key].pos].mode() == STORE_VALUE) {
-          m_values[m_opt_map[key].name].push_back(next_arg);
-          m_options[m_opt_map[key].pos].found() = true;
-          return true;
-        } else {
-          while (next_arg[0] != '-') {
-            m_values[m_opt_map[key].name].push_back(next_arg);
-            if (++arg >= arguments.size()) {
-              break;
-            }
-            next_arg = arguments[arg];
-          }
-          m_options[m_opt_map[key].pos].found() = true;
-          arg--;
-        }
-      }
+    if (arguments[arg].size() != 2) error("invlaid size of short arg...");
+
+    if (arguments[arg].find(option.short_flag()) != 0) continue;
+
+    if (option.mode() == STORE_TRUE) {
+      option.found() = true;
       return true;
     }
 
-    if (without_val.count(key) > 0) {
-      m_options[m_opt_map[key].pos].found() = true;
-    } else {
-      error("Invalid flag '-" + key + "'");
+    if (((option.mode() == STORE_VALUE) || (option.mode() == STORE_MULT_VALUES)) &&
+        (option.found() == false)) {
+      if (get_value_arg(arguments, arg, option)) {
+        option.found() = true;
+        return true;
+      }
     }
   }
+
+
+  
   return true;
 }
 
