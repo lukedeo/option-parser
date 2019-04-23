@@ -58,8 +58,8 @@ struct Option {
   std::string &short_flag() { return m_short_flag; }
 
   std::string &long_flag() { return m_long_flag; }
-
-  std::string m_short_flag = "", m_long_flag = "";
+  std::string &pos_flag() { return m_pos_flag; }
+  std::string m_short_flag = "", m_long_flag = "",  m_pos_flag = "";
 
   StorageMode &mode() { return m_mode; }
 
@@ -161,6 +161,14 @@ std::string Option::get_destination(std::string first_option,
     } else if (second_opt_type == OptionType::SHORT_OPT) {
       dest = remove_character(second_option, '-') + "_option";
     }
+    else {
+    if (first_opt_type == OptionType::POSITIONAL_OPT) {
+      dest =first_option;
+
+    } else if (second_opt_type == OptionType::POSITIONAL_OPT) {
+      dest = second_option;
+    }
+   }
   }
 
   return dest;
@@ -229,15 +237,16 @@ Option &OptionParser::add_option_internal(std::string first_option,
     opt.long_flag() = second_option;
   }
 
-  std::string k;
   if (first_option_type == OptionType::SHORT_OPT) {
     opt.short_flag() = first_option;
-    k = remove_character(first_option, '-');
   } else if (second_option_type == OptionType::SHORT_OPT) {
     opt.short_flag() = second_option;
-    k = remove_character(second_option, '-');
   }
-
+  if (first_option_type == OptionType::POSITIONAL_OPT) {
+    opt.pos_flag() = first_option;
+  } else if (second_option_type == OptionType::POSITIONAL_OPT) {
+    opt.pos_flag() = second_option;
+  }
   return opt;
 }
 
@@ -318,13 +327,12 @@ bool OptionParser::try_to_get_opt(std::vector<std::string> &arguments,
                                   std::string &flag) {
   if (flag == "") return false;
 
-  if (arguments[arg][0] != '-') return false;
-  ;
+  // if (arguments[arg][0] != '-') return false;
 
-  if (arguments[arg].size() == 1) error("A flag needs a letter...");
+  // if (arguments[arg].size() == 1) error("A flag needs a letter...");
 
   if (arguments[arg].find(flag) != 0) return false;
-  ;
+
 
   if (option.mode() == STORE_TRUE) {
     option.found() = true;
@@ -375,8 +383,7 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
   for (unsigned int i = 1; i < argc; ++i) {
     arguments.push_back(argv[i]);
   }
-  arguments.push_back(ARGS_END);  // dummy way to solve problem with last arg of
-                                  // type "arg val1 val2"
+  arguments.push_back(ARGS_END);  // dummy way to solve problem with last arg of  type "arg val1 val2"
 
   // for each argument cluster
   for (unsigned int arg = 0; arg < arguments.size(); ++arg) {
@@ -388,6 +395,10 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
       if (match_found) break;
 
       match_found = try_to_get_opt(arguments, arg, option, option.short_flag());
+
+      if (match_found) break;
+
+      match_found = try_to_get_opt(arguments, arg, option, option.pos_flag());
 
       if (match_found) break;
     }

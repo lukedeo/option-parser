@@ -249,3 +249,52 @@ TEST_CASE("test short args") {
 
 
 }
+
+
+
+TEST_CASE("test positional args") {
+  const char *argv[] = {"tests",  "pos1", "pos2", "-b", "pos3","7","-s","pos5","7", "5", "99" };
+
+  auto argc = length(argv);
+
+  optionparser::OptionParser p(
+      "A test to make sure that this option parser works");
+
+  p.add_option("pos1")
+      .help("just=flag")
+      .mode(optionparser::StorageMode::STORE_TRUE);
+      
+  p.add_option("-b")
+      .help("just=flag")
+      .mode(optionparser::StorageMode::STORE_TRUE);
+      
+  p.add_option("-s")
+      .help("just=flag")
+      .mode(optionparser::StorageMode::STORE_TRUE);
+  p.add_option("pos2")
+      .help("just=flag")
+      .mode(optionparser::StorageMode::STORE_TRUE);
+   p.add_option("pos3")
+      .help("just=flag")
+      .mode(optionparser::StorageMode::STORE_VALUE);
+
+   p.add_option("pos4")
+      .help("just=flag")
+      .mode(optionparser::StorageMode::STORE_VALUE);
+    p.add_option("pos5")
+      .help("just=flag")
+      .mode(optionparser::StorageMode::STORE_MULT_VALUES);
+
+
+  p.eat_arguments(argc, argv);
+  CHECK(p.get_value("pos1"));
+  CHECK(p.get_value("pos2"));
+  CHECK(p.get_value<double>("pos3") == 7);
+
+
+  auto names = p.get_value<std::vector<std::string>>("pos5");
+  CHECK(names[0] == "7");
+  CHECK(names[1] == "5");
+    CHECK(names[2] == "99");
+
+}
