@@ -198,12 +198,9 @@ class OptionParser {
   std::string m_prog_name, m_description;
 
   std::map<std::string, unsigned int> idx;
-  bool get_mult_values(std::vector<std::string> &arguments,
-                       std::string &argument, unsigned int &arg, Option &opt);
+
   bool get_value_arg(std::vector<std::string> &arguments, unsigned int &arg,
                      Option &opt, std::string &flag);
-  bool get_arg_with_value(std::vector<std::string> &arguments,
-                          unsigned int &arg, Option &opt);
 
   bool try_to_get_opt(std::vector<std::string> &arguments, unsigned int &arg,
                       Option &option, std::string &flag);
