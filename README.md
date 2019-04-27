@@ -57,3 +57,4 @@ Some things I'd love to have but don't have the time to do:
 * Additional tests
 * Positional arguments
 * Subparsers, though nice, might not be possible given the library structure.
+
