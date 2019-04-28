@@ -1,6 +1,8 @@
-# `cmd-parser` 💥
+# `option-parser` 💥
 
-A lightweight header-only option parser designed for headache-minimization.
+[![Build Status](https://travis-ci.org/lukedeo/option-parser.svg?branch=master)](https://travis-ci.org/lukedeo/option-parser)
+
+A lightweight header-only option parser designed for headache-minimization in C++. Just copy-and-paste into your project and go!
 
 ## Example Usage
 
@@ -52,9 +54,10 @@ After you `p.add_option("--foo", "-f")`, you can chain additional statements. Th
 
 # 🚧 HELP!
 
-Some things I'd love to have but don't have the time to do:
+Some things I'd love to have but don't have the time to do (in order of priority):
 
-* Additional tests
-* Positional arguments
+* Documentation! The library has a small surface area, but people shouldn't have to dig through a header file to find out how to do things...
+* Additional tests.
+* Positional arguments.
 * Subparsers, though nice, might not be possible given the library structure.
 
