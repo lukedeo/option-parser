@@ -17,6 +17,8 @@
 #include <unordered_set>
 #include <vector>
 
+const std::string ARGS_END = "- ";
+
 namespace optionparser {
 
 enum StorageMode { STORE_TRUE, STORE_VALUE, STORE_MULT_VALUES };
@@ -56,8 +58,8 @@ struct Option {
   std::string &short_flag() { return m_short_flag; }
 
   std::string &long_flag() { return m_long_flag; }
-
-  std::string m_short_flag = "", m_long_flag = "";
+  std::string &pos_flag() { return m_pos_flag; }
+  std::string m_short_flag = "", m_long_flag = "", m_pos_flag = "";
 
   StorageMode &mode() { return m_mode; }
 
@@ -158,6 +160,13 @@ std::string Option::get_destination(std::string first_option,
 
     } else if (second_opt_type == OptionType::SHORT_OPT) {
       dest = remove_character(second_option, '-') + "_option";
+    } else {
+      if (first_opt_type == OptionType::POSITIONAL_OPT) {
+        dest = first_option;
+
+      } else if (second_opt_type == OptionType::POSITIONAL_OPT) {
+        dest = second_option;
+      }
     }
   }
 
@@ -194,20 +203,16 @@ class OptionParser {
   Archive m_values;
   std::vector<Option> m_options;
   std::string m_prog_name, m_description;
-  std::unordered_set<std::string> with_val, without_val;
-  Dictionary m_opt_map;
-  std::map<std::string, unsigned int> idx;
-  bool get_mult_values(std::vector<std::string> &arguments,
-                       std::string &argument, unsigned int &arg, Option &opt);
-  bool get_value_arg(std::vector<std::string> &arguments, unsigned int &arg,
-                     Option &opt);
-  bool get_arg_with_value(std::vector<std::string> &arguments,
-                          unsigned int &arg, Option &opt);
 
-  bool try_to_get_long_args(std::vector<std::string> &arguments,
-                            unsigned int &arg);
-  bool try_to_get_short_args(std::vector<std::string> &arguments,
-                             unsigned int &arg);
+  std::map<std::string, unsigned int> idx;
+
+  bool get_value_arg(std::vector<std::string> &arguments, unsigned int &arg,
+                     Option &opt, std::string &flag);
+
+  bool try_to_get_opt(std::vector<std::string> &arguments, unsigned int &arg,
+                      Option &option, std::string &flag);
+
+  void check_for_missing_args();
 };
 
 Option &OptionParser::add_option(std::string first_option,
@@ -231,42 +236,57 @@ Option &OptionParser::add_option_internal(std::string first_option,
     opt.long_flag() = second_option;
   }
 
-  std::string k;
   if (first_option_type == OptionType::SHORT_OPT) {
     opt.short_flag() = first_option;
-    k = remove_character(first_option, '-');
   } else if (second_option_type == OptionType::SHORT_OPT) {
     opt.short_flag() = second_option;
-    k = remove_character(second_option, '-');
   }
-
-  m_opt_map[k].pos = m_options.size() - 1;
-  m_opt_map[k].name = opt.m_dest;
+  if (first_option_type == OptionType::POSITIONAL_OPT) {
+    opt.pos_flag() = first_option;
+  } else if (second_option_type == OptionType::POSITIONAL_OPT) {
+    opt.pos_flag() = second_option;
+  }
   return opt;
 }
 
+std::vector<std::string> split_str(std::string s, std::string delimiter = " ") {
+  size_t pos = 0;
+  std::string token;
+  std::vector<std::string> vals;
+  while ((pos = s.find(delimiter)) != std::string::npos) {
+    token = s.substr(0, pos);
+    vals.push_back(token);
+    s.erase(0, pos + delimiter.length());
+  }
+  vals.push_back(s);
+  return vals;
+}
+
 bool OptionParser::get_value_arg(std::vector<std::string> &arguments,
-                                 unsigned int &arg, Option &opt) {
+                                 unsigned int &arg, Option &opt,
+                                 std::string &flag) {
   std::string val = "";
   m_values[opt.dest()].clear();
-  if (arguments[arg].size() > opt.long_flag().size()) {
+  if (arguments[arg].size() > flag.size()) {
     auto search_pt = arguments[arg].find_first_of('=');
+
     if (search_pt == std::string::npos) {
       search_pt = arguments[arg].find_first_of(' ');
+
       if (search_pt == std::string::npos) {
-        error("Error, long options (" + opt.long_flag() +
+        error("Error, long options (" + flag +
               ") require a '=' or space before a value.");
         return false;
       }
-
-      m_values[opt.dest()].push_back(arguments[arg].substr(search_pt + 1));
+      auto vals = split_str(arguments[arg].substr(search_pt + 1));
+      for (auto v : vals) m_values[opt.dest()].push_back(v);
     }
   }
 
   else {
     if (arg + 1 >= arguments.size()) {
       if (opt.default_value() == "") {
-        error("error, flag '" + opt.long_flag() + "' requires an argument.");
+        error("error, flag '" + flag + "' requires an argument.");
         return false;
       }
       if (m_values[opt.dest()].size() == 0) {
@@ -275,7 +295,7 @@ bool OptionParser::get_value_arg(std::vector<std::string> &arguments,
     } else {
       if (arguments[arg + 1][0] == '-') {
         if (opt.default_value() == "") {
-          error("error, flag '" + opt.long_flag() + "' requires an argument.");
+          error("error, flag '" + flag + "' requires an argument.");
           return false;
         }
         if (m_values[opt.dest()].size() == 0) {
@@ -291,159 +311,45 @@ bool OptionParser::get_value_arg(std::vector<std::string> &arguments,
   }
 
   while (arguments[arg + 1][0] != '-') {
+    arg++;
+    m_values[opt.dest()].push_back(arguments[arg]);
     if (arg + 1 >= arguments.size()) {
       break;
     }
-
-    m_values[opt.dest()].push_back(arguments[arg + 1]);
-    arg++;
   }
 
   return true;
 }
 
-bool OptionParser::try_to_get_long_args(std::vector<std::string> &arguments,
-                                        unsigned int &arg) {
-  for (auto &option : m_options)  // for each option set
-  {
-    auto opt = option;
+bool OptionParser::try_to_get_opt(std::vector<std::string> &arguments,
+                                  unsigned int &arg, Option &option,
+                                  std::string &flag) {
+  if (flag == "") return false;
 
-    if (opt.long_flag() == "") continue;
+  // if (arguments[arg][0] != '-') return false;
 
-    if (arguments[arg][0] != '-') continue;
+  // if (arguments[arg].size() == 1) error("A flag needs a letter...");
 
-    if (arguments[arg].size() == 1) error("A flag needs a letter...");
+  if (arguments[arg].find(flag) != 0) return false;
 
-    if (arguments[arg].find(opt.long_flag()) != 0) continue;
+  if (option.mode() == STORE_TRUE) {
+    option.found() = true;
+    return true;
+  }
 
-    if (opt.mode() == STORE_TRUE) {
+  if (((option.mode() == STORE_VALUE) ||
+       (option.mode() == STORE_MULT_VALUES)) &&
+      (option.found() == false)) {
+    if (get_value_arg(arguments, arg, option, flag)) {
       option.found() = true;
       return true;
-    }
-
-    if (((opt.mode() == STORE_VALUE) || (opt.mode() == STORE_MULT_VALUES)) &&
-        (option.found() == false)) {
-      if (get_value_arg(arguments, arg, opt)) {
-        option.found() = true;
-        return true;
-      }
     }
   }
 
   return false;
 }
 
-bool OptionParser::try_to_get_short_args(std::vector<std::string> &arguments,
-                                         unsigned int &arg) {
-  if (arguments[arg][0] != '-') return false;
-
-  if (arguments[arg][1] == '-') return false;
-
-  for (unsigned int i = 1; i < arguments[arg].size(); ++i) {
-    std::string key(1, arguments[arg][i]);
-
-    if (with_val.count(key) > 0) {
-      m_values[m_opt_map[key].name].clear();
-      if (arguments[arg].size() > (arguments[arg].find(key) + 1)) {
-        if (m_options[m_opt_map[key].pos].mode() == STORE_VALUE) {
-          m_values[m_opt_map[key].name].push_back(arguments[arg].substr(i + 1));
-          m_options[m_opt_map[key].pos].found() = true;
-          return true;
-        } else {
-          m_values[m_opt_map[key].name].push_back(arguments[arg].substr(i + 1));
-          m_options[m_opt_map[key].pos].found() = true;
-          if (++arg < arguments.size()) {
-            auto next_arg = arguments[arg];
-            while (next_arg[0] != '-') {
-              m_values[m_opt_map[key].name].push_back(next_arg);
-
-              if (++arg >= arguments.size()) {
-                break;
-              }
-              next_arg = arguments[arg];
-            }
-            arg--;
-          }
-          return true;
-        }
-      } else  // case where theres a space until the next args.
-      {
-        if (++arg >= arguments.size()) {
-          error("error, flag '-" + key + "' requires at least one argument.");
-        }
-        auto next_arg = arguments[arg];
-        if (next_arg[0] == '-') {
-          error("error, flag '-" + key + "' requires an argument.");
-        }
-        m_values[m_opt_map[key].name].clear();
-        if (m_options[m_opt_map[key].pos].mode() == STORE_VALUE) {
-          m_values[m_opt_map[key].name].push_back(next_arg);
-          m_options[m_opt_map[key].pos].found() = true;
-          return true;
-        } else {
-          while (next_arg[0] != '-') {
-            m_values[m_opt_map[key].name].push_back(next_arg);
-            if (++arg >= arguments.size()) {
-              break;
-            }
-            next_arg = arguments[arg];
-          }
-          m_options[m_opt_map[key].pos].found() = true;
-          arg--;
-        }
-      }
-      return true;
-    }
-
-    if (without_val.count(key) > 0) {
-      m_options[m_opt_map[key].pos].found() = true;
-    } else {
-      error("Invalid flag '-" + key + "'");
-    }
-  }
-  return true;
-}
-
-void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
-  unsigned int idx_ctr = 0;
-  for (auto &opt : m_options) {
-    idx[opt.m_dest] = idx_ctr;
-    if (opt.short_flag() != "") {
-      auto shortflag = opt.short_flag();
-      if (opt.mode() != STORE_TRUE) {
-        with_val.insert(remove_character(shortflag, '-'));
-      } else {
-        without_val.insert(remove_character(shortflag, '-'));
-      }
-      m_opt_map[remove_character(shortflag, '-')].name = opt.dest();
-    }
-    ++idx_ctr;
-  }
-  m_prog_name = argv[0];
-  std::vector<std::string> arguments;
-  for (unsigned int i = 1; i < argc; ++i) {
-    arguments.push_back(argv[i]);
-  }
-
-  // for each argument cluster
-  for (unsigned int arg = 0; arg < arguments.size(); ++arg) {
-    auto argument = arguments[arg];
-    bool match_found = false;
-
-    match_found = try_to_get_long_args(arguments, arg);
-
-    if (match_found) continue;
-
-    match_found = try_to_get_short_args(arguments, arg);
-
-    if (!match_found) {
-      error("Unrecognized flag/option '" + argument + "'");
-    }
-  }
-
-  if (get_value("help")) {
-    help();
-  }
+void OptionParser::check_for_missing_args() {
   std::vector<std::string> missing;
   for (auto &opt : m_options) {
     if ((opt.required()) && (!opt.found())) {
@@ -454,14 +360,58 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
     }
   }
   if (missing.size() > 0) {
-    std::string e = "Missing required flags: ";
-    e += missing.at(0);
+    std::string e = "Missing required flags: " + missing.at(0);
+
     for (unsigned int i = 1; i < missing.size(); ++i) {
-      e += ", ";
-      e += missing.at(i);
+      e += ", " + missing.at(i);
     }
     error(e + ".");
   }
+}
+
+void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
+  unsigned int idx_ctr = 0;
+  for (auto &opt : m_options) {
+    idx[opt.m_dest] = idx_ctr;
+    idx_ctr++;
+  }
+
+  m_prog_name = argv[0];
+  std::vector<std::string> arguments;
+  for (unsigned int i = 1; i < argc; ++i) {
+    arguments.push_back(argv[i]);
+  }
+  arguments.push_back(ARGS_END);  // dummy way to solve problem with last arg of
+                                  // type "arg val1 val2"
+
+  // for each argument cluster
+  for (unsigned int arg = 0; arg < arguments.size(); ++arg) {
+    bool match_found = false;
+    for (auto &option : m_options)  // for each option set
+    {
+      match_found = try_to_get_opt(arguments, arg, option, option.long_flag());
+
+      if (match_found) break;
+
+      match_found = try_to_get_opt(arguments, arg, option, option.short_flag());
+
+      if (match_found) break;
+
+      match_found = try_to_get_opt(arguments, arg, option, option.pos_flag());
+
+      if (match_found) break;
+    }
+
+    if (!match_found) {
+      if (arguments[arg] != ARGS_END)
+        error("Unrecognized flag/option '" + arguments[arg] + "'");
+    }
+  }
+
+  if (get_value("help")) {
+    help();
+  }
+  check_for_missing_args();
 }
 //----------------------------------------------------------------------------
 void OptionParser::error(const std::string &e) {
