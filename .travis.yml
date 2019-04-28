@@ -1,7 +1,9 @@
 os:
   - linux
   - osx
-compiler: clang
+compiler:
+  - clang
+  - gcc
 language: cpp
 dist: trusty
 script:
