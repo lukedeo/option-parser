@@ -205,6 +205,8 @@ class OptionParser {
 
   void error(const std::string &e);
 
+  std::string fail_for_key(const std::string &key);
+
   Archive m_values;
   std::vector<Option> m_options;
   std::string m_prog_name, m_description;
@@ -429,6 +431,13 @@ void OptionParser::error(const std::string &e) {
   exit(1);
 }
 
+std::string OptionParser::fail_for_key(const std::string &key) {
+  auto msg = "Tried to access value for field '" + key +
+             "' which is not a valid field.";
+  error(msg);
+  return msg;
+}
+
 void OptionParser::help() {
   auto split = m_prog_name.find_last_of('/');
   std::string stripped_name = m_prog_name.substr(split + 1);
@@ -466,70 +475,52 @@ T OptionParser::get_value(const std::string &key) {
   try {
     return m_options[idx.at(key)].found();
   } catch (std::out_of_range &err) {
-    std::string e("Tried to access value for field '");
-    e += key;
-    e += "' which is not a valid field.";
-    throw std::out_of_range(e);
+    throw fail_for_key(key);
   }
 }
 //----------------------------------------------------------------------------
 template <>
 std::string OptionParser::get_value<std::string>(const std::string &key) {
   try {
-    return m_values[key][0];
+    return m_values.at(key).at(0);
   } catch (std::out_of_range &err) {
-    std::string e("Tried to access value for field '");
-    e += key;
-    e += "' which is not a valid field.";
-    throw std::out_of_range(e);
+    throw fail_for_key(key);
   }
 }
 //----------------------------------------------------------------------------
 template <>
 double OptionParser::get_value<double>(const std::string &key) {
   try {
-    return std::stod(m_values[key][0]);
+    return std::stod(m_values.at(key).at(0));
   } catch (std::out_of_range &err) {
-    std::string e("Tried to access value for field '");
-    e += key;
-    e += "' which is not a valid field.";
-    throw std::out_of_range(e);
+    throw fail_for_key(key);
   }
 }
 //----------------------------------------------------------------------------
 template <>
 float OptionParser::get_value<float>(const std::string &key) {
   try {
-    return std::stof(m_values[key][0]);
+    return std::stof(m_values.at(key).at(0));
   } catch (std::out_of_range &err) {
-    std::string e("Tried to access value for field '");
-    e += key;
-    e += "' which is not a valid field.";
-    throw std::out_of_range(e);
+    throw fail_for_key(key);
   }
 }
 //----------------------------------------------------------------------------
 template <>
 int OptionParser::get_value<int>(const std::string &key) {
   try {
-    return std::stoi(m_values[key][0]);
+    return std::stoi(m_values.at(key).at(0));
   } catch (std::out_of_range &err) {
-    std::string e("Tried to access value for field '");
-    e += key;
-    e += "' which is not a valid field.";
-    throw std::out_of_range(e);
+    throw fail_for_key(key);
   }
 }
 //----------------------------------------------------------------------------
 template <>
 unsigned int OptionParser::get_value<unsigned int>(const std::string &key) {
   try {
-    return std::stoul(m_values[key][0]);
+    return std::stoul(m_values.at(key).at(0));
   } catch (std::out_of_range &err) {
-    std::string e("Tried to access value for field '");
-    e += key;
-    e += "' which is not a valid field.";
-    throw std::out_of_range(e);
+    throw fail_for_key(key);
   }
 }
 //----------------------------------------------------------------------------
@@ -537,12 +528,9 @@ template <>
 std::vector<std::string> OptionParser::get_value<std::vector<std::string>>(
     const std::string &key) {
   try {
-    return m_values[key];
+    return m_values.at(key);
   } catch (std::out_of_range &err) {
-    std::string e("Tried to access value for field '");
-    e += key;
-    e += "' which is not a valid field.";
-    throw std::out_of_range(e);
+    throw fail_for_key(key);
   }
 }
 //----------------------------------------------------------------------------
@@ -551,15 +539,12 @@ std::vector<int> OptionParser::get_value<std::vector<int>>(
     const std::string &key) {
   try {
     std::vector<int> v;
-    for (auto &entry : m_values[key]) {
+    for (auto &entry : m_values.at(key)) {
       v.push_back(std::stoi(entry));
     }
     return std::move(v);
   } catch (std::out_of_range &err) {
-    std::string e("Tried to access value for field '");
-    e += key;
-    e += "' which is not a valid field.";
-    throw std::out_of_range(e);
+    throw fail_for_key(key);
   }
 }
 
