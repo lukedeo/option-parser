@@ -7,8 +7,8 @@
 #ifndef OPTIONPARSER_H_
 #define OPTIONPARSER_H_
 
-#include <stdlib.h>
 #include <algorithm>
+#include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <map>
@@ -31,16 +31,16 @@ struct DictionaryEntry {
 };
 
 struct Option {
-  Option() {}
+  Option() = default;
   void help_doc() {
     std::string h = "    ";
-    if (m_long_flag != "") {
+    if (!m_long_flag.empty()) {
       h += m_long_flag;
-      if (m_short_flag != "") {
+      if (!m_short_flag.empty()) {
         h += ", ";
       }
     }
-    if (m_short_flag != "") {
+    if (!m_short_flag.empty()) {
       h += m_short_flag;
     }
 
@@ -108,8 +108,10 @@ struct Option {
   std::string m_default_value = "";
 
   static OptionType get_type(std::string opt);
-  static std::string get_destination(std::string opt1, std::string opt2,
-                                     OptionType ft, OptionType st);
+  static std::string get_destination(const std::string &first_option,
+                                     const std::string &second_option,
+                                     OptionType first_opt_type,
+                                     OptionType second_opt_type);
 };
 //----------------------------------------------------------------------------
 std::string remove_character(std::string str, const char c) {
@@ -132,7 +134,7 @@ typedef std::map<std::string, std::vector<std::string>> Archive;
 typedef std::map<std::string, DictionaryEntry> Dictionary;
 
 OptionType Option::get_type(std::string opt) {
-  if (opt == "") {
+  if (opt.empty()) {
     return OptionType::EMPTY_OPT;
   }
 
@@ -147,8 +149,8 @@ OptionType Option::get_type(std::string opt) {
   }
   return OptionType::POSITIONAL_OPT;
 }
-std::string Option::get_destination(std::string first_option,
-                                    std::string second_option,
+std::string Option::get_destination(const std::string &first_option,
+                                    const std::string &second_option,
                                     OptionType first_opt_type,
                                     OptionType second_opt_type) {
   std::string dest;
@@ -178,8 +180,8 @@ std::string Option::get_destination(std::string first_option,
 //-----------------------------------------------------------------------------
 class OptionParser {
  public:
-  OptionParser(std::string description = "", bool create_help = true)
-      : m_options(0), m_description(description) {
+  explicit OptionParser(std::string description = "", bool create_help = true)
+      : m_options(0), m_description(std::move(description)) {
     if (create_help) {
       add_option("--help", "-h").help("Display this help message and exit.");
     }
@@ -189,15 +191,17 @@ class OptionParser {
 
   void eat_arguments(unsigned int argc, char const *argv[]);
 
-  Option &add_option(std::string first_option, std::string second_option = "");
+  Option &add_option(const std::string &first_option,
+                     const std::string &second_option = "");
 
   template <class T = bool>
-  T get_value(std::string key);
+  T get_value(const std::string &key);
 
   void help();
 
  private:
-  Option &add_option_internal(std::string longoption, std::string shortoption);
+  Option &add_option_internal(const std::string &first_option,
+                              const std::string &second_option);
 
   void error(const std::string &e);
 
@@ -216,13 +220,13 @@ class OptionParser {
   void check_for_missing_args();
 };
 
-Option &OptionParser::add_option(std::string first_option,
-                                 std::string second_option) {
+Option &OptionParser::add_option(const std::string &first_option,
+                                 const std::string &second_option) {
   return add_option_internal(first_option, second_option);
 }
 
-Option &OptionParser::add_option_internal(std::string first_option,
-                                          std::string second_option) {
+Option &OptionParser::add_option_internal(const std::string &first_option,
+                                          const std::string &second_option) {
   m_options.resize(m_options.size() + 1);
   Option &opt = m_options.back();
   OptionType first_option_type = Option::get_type(first_option);
@@ -250,7 +254,8 @@ Option &OptionParser::add_option_internal(std::string first_option,
   return opt;
 }
 
-std::vector<std::string> split_str(std::string s, std::string delimiter = " ") {
+std::vector<std::string> split_str(std::string s,
+                                   const std::string &delimiter = " ") {
   size_t pos = 0;
   std::string token;
   std::vector<std::string> vals;
@@ -266,7 +271,7 @@ std::vector<std::string> split_str(std::string s, std::string delimiter = " ") {
 bool OptionParser::get_value_arg(std::vector<std::string> &arguments,
                                  unsigned int &arg, Option &opt,
                                  std::string &flag) {
-  std::string val = "";
+  std::string val;
   m_values[opt.dest()].clear();
   if (arguments[arg].size() > flag.size()) {
     auto search_pt = arguments[arg].find_first_of('=');
@@ -280,33 +285,33 @@ bool OptionParser::get_value_arg(std::vector<std::string> &arguments,
         return false;
       }
       auto vals = split_str(arguments[arg].substr(search_pt + 1));
-      for (auto v : vals) m_values[opt.dest()].push_back(v);
+      for (const auto &v : vals) m_values[opt.dest()].push_back(v);
     }
   }
 
   else {
     if (arg + 1 >= arguments.size()) {
-      if (opt.default_value() == "") {
+      if (opt.default_value().empty()) {
         error("error, flag '" + flag + "' requires an argument.");
         return false;
       }
-      if (m_values[opt.dest()].size() == 0) {
+      if (m_values[opt.dest()].empty()) {
         val = opt.default_value();
       }
     } else {
       if (arguments[arg + 1][0] == '-') {
-        if (opt.default_value() == "") {
+        if (opt.default_value().empty()) {
           error("error, flag '" + flag + "' requires an argument.");
           return false;
         }
-        if (m_values[opt.dest()].size() == 0) {
+        if (m_values[opt.dest()].empty()) {
           val = opt.default_value();
         }
       }
     }
   }
 
-  if (val != "") {
+  if (!val.empty()) {
     m_values[opt.dest()].push_back(val);
     return true;
   }
@@ -325,7 +330,7 @@ bool OptionParser::get_value_arg(std::vector<std::string> &arguments,
 bool OptionParser::try_to_get_opt(std::vector<std::string> &arguments,
                                   unsigned int &arg, Option &option,
                                   std::string &flag) {
-  if (flag == "") {
+  if (flag.empty()) {
     return false;
   }
 
@@ -340,7 +345,7 @@ bool OptionParser::try_to_get_opt(std::vector<std::string> &arguments,
 
   if (((option.mode() == STORE_VALUE) ||
        (option.mode() == STORE_MULT_VALUES)) &&
-      (option.found() == false)) {
+      !option.found()) {
     if (get_value_arg(arguments, arg, option, flag)) {
       option.found() = true;
       return true;
@@ -355,12 +360,12 @@ void OptionParser::check_for_missing_args() {
   for (auto &opt : m_options) {
     if ((opt.required()) && (!opt.found())) {
       missing.push_back(opt.dest());
-    } else if ((opt.default_value() != "") && (!opt.found())) {
+    } else if ((!opt.default_value().empty()) && (!opt.found())) {
       m_values[opt.dest()].push_back(opt.default_value());
       opt.found() = true;
     }
   }
-  if (missing.size() > 0) {
+  if (!missing.empty()) {
     std::string e = "Missing required flags: " + missing.at(0);
     for (unsigned int i = 1; i < missing.size(); ++i) {
       e += ", " + missing.at(i);
@@ -379,7 +384,7 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
   m_prog_name = argv[0];
   std::vector<std::string> arguments;
   for (unsigned int i = 1; i < argc; ++i) {
-    arguments.push_back(argv[i]);
+    arguments.emplace_back(argv[i]);
   }
   arguments.push_back(ARGS_END);  // dummy way to solve problem with last arg of
                                   // type "arg val1 val2"
@@ -430,7 +435,7 @@ void OptionParser::help() {
   std::cout << "usage: " << stripped_name << " [-h] ";
   for (auto &option : m_options) {
     if (option.required()) {
-      if (option.short_flag() != "") {
+      if (!option.short_flag().empty()) {
         std::cout << option.short_flag();
       } else {
         std::cout << option.long_flag();
@@ -446,7 +451,7 @@ void OptionParser::help() {
   }
   std::cout << "[options]\n";
 
-  if (m_description != "") {
+  if (!m_description.empty()) {
     std::cout << "\n" << m_description << "\n" << std::endl;
   }
   for (auto &option : m_options) {
@@ -457,7 +462,7 @@ void OptionParser::help() {
 
 //----------------------------------------------------------------------------
 template <class T>
-T OptionParser::get_value(std::string key) {
+T OptionParser::get_value(const std::string &key) {
   try {
     return m_options[idx.at(key)].found();
   } catch (std::out_of_range &err) {
@@ -469,7 +474,7 @@ T OptionParser::get_value(std::string key) {
 }
 //----------------------------------------------------------------------------
 template <>
-std::string OptionParser::get_value<std::string>(std::string key) {
+std::string OptionParser::get_value<std::string>(const std::string &key) {
   try {
     return m_values[key][0];
   } catch (std::out_of_range &err) {
@@ -481,7 +486,7 @@ std::string OptionParser::get_value<std::string>(std::string key) {
 }
 //----------------------------------------------------------------------------
 template <>
-double OptionParser::get_value<double>(std::string key) {
+double OptionParser::get_value<double>(const std::string &key) {
   try {
     return std::stod(m_values[key][0]);
   } catch (std::out_of_range &err) {
@@ -493,7 +498,7 @@ double OptionParser::get_value<double>(std::string key) {
 }
 //----------------------------------------------------------------------------
 template <>
-float OptionParser::get_value<float>(std::string key) {
+float OptionParser::get_value<float>(const std::string &key) {
   try {
     return std::stof(m_values[key][0]);
   } catch (std::out_of_range &err) {
@@ -505,7 +510,7 @@ float OptionParser::get_value<float>(std::string key) {
 }
 //----------------------------------------------------------------------------
 template <>
-int OptionParser::get_value<int>(std::string key) {
+int OptionParser::get_value<int>(const std::string &key) {
   try {
     return std::stoi(m_values[key][0]);
   } catch (std::out_of_range &err) {
@@ -517,7 +522,7 @@ int OptionParser::get_value<int>(std::string key) {
 }
 //----------------------------------------------------------------------------
 template <>
-unsigned int OptionParser::get_value<unsigned int>(std::string key) {
+unsigned int OptionParser::get_value<unsigned int>(const std::string &key) {
   try {
     return std::stoul(m_values[key][0]);
   } catch (std::out_of_range &err) {
@@ -530,7 +535,7 @@ unsigned int OptionParser::get_value<unsigned int>(std::string key) {
 //----------------------------------------------------------------------------
 template <>
 std::vector<std::string> OptionParser::get_value<std::vector<std::string>>(
-    std::string key) {
+    const std::string &key) {
   try {
     return m_values[key];
   } catch (std::out_of_range &err) {
@@ -542,7 +547,8 @@ std::vector<std::string> OptionParser::get_value<std::vector<std::string>>(
 }
 //----------------------------------------------------------------------------
 template <>
-std::vector<int> OptionParser::get_value<std::vector<int>>(std::string key) {
+std::vector<int> OptionParser::get_value<std::vector<int>>(
+    const std::string &key) {
   try {
     std::vector<int> v;
     for (auto &entry : m_values[key]) {
