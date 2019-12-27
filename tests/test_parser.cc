@@ -9,6 +9,27 @@ constexpr size_t length(T (&)[N]) {
   return N;
 }
 
+TEST_CASE("test substring names") {
+   const char *argv[] = {"tests",  
+                "--flag1",
+                "--flag",        
+  };
+  int argc = length(argv);
+  
+  optionparser::OptionParser p(
+      "A test to make sure that this option parser works");
+
+  p.add_option("--flag", "-f").help("just flag");
+  p.add_option("--flag1", "-f1").help("just flag with substring for name");
+  p.eat_arguments(argc, argv);
+  bool check_is_flag_set = false;
+  if (p.get_value("flag1")) {
+    check_is_flag_set = true;
+  }
+  
+  CHECK(check_is_flag_set == true);
+
+}
 TEST_CASE("test parser functionality") {
   const char *argv[] = {"tests",
                         "--flag",
@@ -127,8 +148,8 @@ TEST_CASE("test parser functionality") {
 }
 
 TEST_CASE("test OO functionality") {
-  const char *argv[] = {"tests",    "--flag asdsaflag", "bsadsad",
-                        "bqwewqeq", "--boolean",        "--long l1 l2 l3"};
+  const char *argv[] = {"tests",    "--flag", "asdsaflag","bsadsad",
+                        "bqwewqeq", "--boolean"};
 
   auto argc = length(argv);
 
@@ -138,9 +159,7 @@ TEST_CASE("test OO functionality") {
   p.add_option("--flag", "-f")
       .help("just=flag")
       .mode(optionparser::StorageMode::STORE_MULT_VALUES);
-  p.add_option("--long", "-l")
-      .help("just=flag")
-      .mode(optionparser::StorageMode::STORE_MULT_VALUES);
+ 
   p.add_option("--boolean", "-b")
       .help("boolean")
       .mode(optionparser::StorageMode::STORE_TRUE);
@@ -154,13 +173,7 @@ TEST_CASE("test OO functionality") {
     CHECK(names[1] == "bsadsad");
     CHECK(names[2] == "bqwewqeq");
   }
-  if (p.get_value("long")) {
-    check_is_flag_set = true;
-    auto names = p.get_value<std::vector<std::string>>("long");
-    CHECK(names[0] == "l1");
-    CHECK(names[1] == "l2");
-    CHECK(names[2] == "l3");
-  }
+ 
 }
 
 TEST_CASE("test default argument not passed") {
@@ -207,11 +220,9 @@ TEST_CASE_TEMPLATE("test typecasting functionality", T, int, double,
   CHECK(typeid(value) == typeid(T));
 }
 
-
 TEST_CASE("test short args") {
   const char *argv[] = {"tests", "-s",   "test_str", "-m",         "str1",
-                        "str2",  "str3", "-b",       "-l t1 t2 t3"};
-
+                        "str2",  "str3", "-b", "-l" ,"t1","t2","t3"};
 
   auto argc = length(argv);
 
@@ -234,9 +245,7 @@ TEST_CASE("test short args") {
   p.eat_arguments(argc, argv);
   CHECK(p.get_value("b_option"));
 
-
   CHECK(p.get_value<std::string>("s_option") == "test_str");
-
 
   auto names = p.get_value<std::vector<std::string>>("m_option");
   CHECK(names[0] == "str1");

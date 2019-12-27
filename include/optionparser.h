@@ -329,8 +329,8 @@ bool OptionParser::try_to_get_opt(std::vector<std::string> &arguments,
   if (flag.empty()) {
     return false;
   }
-
-  if (arguments[arg].find(flag) != 0) {
+  std::string str_arg = split_str(flag)[0];
+  if (arguments[arg].compare(str_arg) != 0) {
     return false;
   }
 
