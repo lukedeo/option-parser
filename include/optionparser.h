@@ -131,16 +131,20 @@ OptionType Option::get_type(std::string opt) {
   if (opt.empty()) {
     return OptionType::EMPTY_OPT;
   }
-
-  if (opt[0] == '-') {
-    if (opt.size() == 2) {
+  if (opt.size() == 2)
+  {
+    if (opt[0] == '-') {
       return OptionType::SHORT_OPT;
     }
+  }
 
-    else {
+  if (opt.size() > 2)
+  {
+    if (opt[0] == '-' && opt[1] == '-' ) {
       return OptionType::LONG_OPT;
     }
   }
+ 
   return OptionType::POSITIONAL_OPT;
 }
 std::string Option::get_destination(const std::string &first_option,

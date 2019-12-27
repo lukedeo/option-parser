@@ -29,6 +29,13 @@ TEST_CASE("test substring names") {
   
   CHECK(check_is_flag_set == true);
 
+  check_is_flag_set = false;
+  if (p.get_value("flag")) {
+    check_is_flag_set = true;
+  }
+  
+  CHECK(check_is_flag_set == true);
+  
 }
 TEST_CASE("test parser functionality") {
   const char *argv[] = {"tests",
@@ -119,7 +126,7 @@ TEST_CASE("test parser functionality") {
     check_is_flag_set = true;
   }
   CHECK(check_is_flag_set == true);
-  if (p.get_value("dash")) {
+  if (p.get_value("-dash")) {
     check_is_flag_set = true;
   }
   CHECK(check_is_flag_set == true);
