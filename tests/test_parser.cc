@@ -9,6 +9,123 @@ constexpr size_t length(T (&)[N]) {
   return N;
 }
 
+TEST_CASE("test substring names"){
+  SUBCASE("test boolean arg with long arg"){
+    const char *argv[] = {"tests",  
+                "--boolean"     
+    };
+    int argc = length(argv);
+    optionparser::OptionParser p(
+      "A test to make sure that this option parser works");
+      p.add_option("--boolean").help(" boolean value");
+      
+      p.eat_arguments(argc, argv);
+      CHECK(p.get_value("boolean") == true);
+
+  }
+  SUBCASE("test boolean arg with short arg"){
+    const char *argv[] = {"tests",  
+                "-b"     
+    };
+    int argc = length(argv);
+    optionparser::OptionParser p(
+      "A test to make sure that this option parser works");
+      p.add_option("-b").help(" boolean value");
+      p.eat_arguments(argc, argv);
+      CHECK(p.get_value("b_option") == true);
+  }
+  SUBCASE("test boolean arg with both short  and long arg pass long"){
+    const char *argv[] = {"tests",  
+                "--boolean"     
+    };
+    int argc = length(argv);
+    optionparser::OptionParser p(
+      "A test to make sure that this option parser works");
+      p.add_option("--boolean", "-b").help(" boolean value");
+      p.eat_arguments(argc, argv);
+      CHECK(p.get_value("boolean") == true);
+  }
+   SUBCASE("test boolean arg with both short  and long arg pass short"){
+    const char *argv[] = {"tests",  
+                "-b"     
+    };
+    int argc = length(argv);
+    optionparser::OptionParser p(
+      "A test to make sure that this option parser works");
+      p.add_option("--boolean", "-b").help(" boolean value");
+      p.eat_arguments(argc, argv);
+      CHECK(p.get_value("boolean") == true);
+
+  }
+
+   SUBCASE("test boolean positional arg "){
+    const char *argv[] = {"tests",  
+                "passed_bool_value"     
+    };
+    int argc = length(argv);
+    optionparser::OptionParser p(
+      "A test to make sure that this option parser works");
+      p.add_option("pass").help(" positional boolean value");
+      p.eat_arguments(argc, argv);
+      CHECK(p.get_value("pass") == true);
+
+  }
+
+  SUBCASE("test boolean positional arg which is not passed"){
+    const char *argv[] = {"tests"    
+    };
+    int argc = length(argv);
+    optionparser::OptionParser p(
+      "A test to make sure that this option parser works");
+      p.add_option("pass").help(" positional boolean value");
+      p.eat_arguments(argc, argv);
+      CHECK(p.get_value("pass") == false);
+
+  }
+   SUBCASE("test many boolean  arg which "){
+    const char *argv[] = {"tests", "--second",  "-f",
+    };
+    int argc = length(argv);
+    optionparser::OptionParser p(
+      "A test to make sure that this option parser works");
+      p.add_option("--first", "-f").help(" first boolean value");
+      p.add_option("-s", "--second").help(" second boolean value");
+      p.add_option("--third").help(" third boolean value");
+      p.add_option("-l").help(" last boolean value");
+
+      p.eat_arguments(argc, argv);
+      CHECK(p.get_value("first") == true);
+      CHECK(p.get_value("second") == true);
+      CHECK(p.get_value("third") == false);
+      CHECK(p.get_value("l_option") == false);
+
+  }
+   SUBCASE("test many boolean  arg  with positional args "){
+    const char *argv[] = {"tests", "--second",  "-f", "first_pos", "72", "--third", "test_string"
+    };
+    int argc = length(argv);
+    optionparser::OptionParser p(
+      "A test to make sure that this option parser works");
+      p.add_option("--first", "-f").help(" first boolean value");
+      p.add_option("-s", "--second").help(" second boolean value");
+      p.add_option("--third").help(" third boolean value");
+      p.add_option("-l").help(" last boolean value");
+       p.add_option("first_pos").help(" last boolean value");
+        p.add_option("second_pos").help(" last boolean value");
+         p.add_option("last_pos").help(" last boolean value");
+
+      p.eat_arguments(argc, argv);
+      CHECK(p.get_value("first") == true);
+      CHECK(p.get_value("second") == true);
+      CHECK(p.get_value("third") == true);
+      CHECK(p.get_value("l_option") == false);
+
+      CHECK(p.get_value("first_pos") == true);
+      CHECK(p.get_value<std::string>("second_pos") == "72");
+      CHECK(p.get_value<std::string>("last_pos") == "test_string");
+
+  }
+}
 
 // TEST_CASE("test substring names") {
 //    const char *argv[] = {"tests",  

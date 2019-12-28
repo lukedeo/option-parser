@@ -414,17 +414,12 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
         break;
       }
 
-      match_found = try_to_get_opt(arguments, arg, option, option.pos_flag());
-      if (match_found) {
-        break;
-      }
     }
 
     if (!match_found) {
       if (arguments[arg] != ARGS_END) {
         if (pos_args_count > pos_args)
         {
-          std::cout << pos_options_names[pos_args - 1] << std::endl;
           m_options[idx.at(pos_options_names[pos_args - 1])].found() = true;
           m_values[pos_options_names[pos_args - 1]].push_back(arguments[arg]);
           pos_args++;
