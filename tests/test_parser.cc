@@ -110,9 +110,9 @@ TEST_CASE("test substring names"){
       p.add_option("-s", "--second").help(" second boolean value");
       p.add_option("--third").help(" third boolean value");
       p.add_option("-l").help(" last boolean value");
-       p.add_option("first_pos").help(" last boolean value");
-        p.add_option("second_pos").help(" last boolean value");
-         p.add_option("last_pos").help(" last boolean value");
+      p.add_option("first_pos").help(" first boolean positional value");
+      p.add_option("second_pos").help(" second boolean positionalboolean value");
+      p.add_option("last_pos").help(" last boolean value");
 
       p.eat_arguments(argc, argv);
       CHECK(p.get_value("first") == true);
@@ -121,7 +121,7 @@ TEST_CASE("test substring names"){
       CHECK(p.get_value("l_option") == false);
 
       CHECK(p.get_value("first_pos") == true);
-      CHECK(p.get_value<std::string>("second_pos") == "72");
+      CHECK(p.get_value<int>("second_pos") == 72);
       CHECK(p.get_value<std::string>("last_pos") == "test_string");
 
   }

@@ -16,22 +16,19 @@ const std::string ARGS_END = "- ";
 std::vector<std::string> split_str(std::string s,
                                    const std::string &delimiter = " ") {
   size_t pos = 0;
-  std::string token;
+  size_t delimiter_length = delimiter.length();
   std::vector<std::string> vals;
   while ((pos = s.find(delimiter)) != std::string::npos) {
-    token = s.substr(0, pos);
-    vals.push_back(token);
-    s.erase(0, pos + delimiter.length());
+    vals.push_back(s.substr(0, pos));
+    s.erase(0, pos + delimiter_length);
   }
   vals.push_back(s);
   return vals;
 }
 
-
 namespace optionparser {
 
-enum StorageMode { STORE_TRUE, STORE_VALUE, STORE_MULT_VALUES };
-
+enum StorageMode { STORE_TRUE = 0, STORE_VALUE, STORE_MULT_VALUES };
 enum OptionType { LONG_OPT = 0, SHORT_OPT, POSITIONAL_OPT, EMPTY_OPT };
 
 struct DictionaryEntry {
@@ -80,6 +77,7 @@ public:
   }
 
   std::string &default_value() { return m_default_value; }
+  
   Option &default_value(const std::string &default_value) {
     m_default_value = default_value;
     return *this;
@@ -100,8 +98,7 @@ public:
   static std::string get_destination(const std::string &first_option,
                                      const std::string &second_option,
                                      OptionType first_opt_type,
-                                     OptionType second_opt_type, 
-                                     int pos_args_count);
+                                     OptionType second_opt_type);
 private:
   bool m_found = false;
   bool m_required = false;
@@ -109,6 +106,7 @@ private:
   std::string m_help = "";
   std::string m_dest = "";
   std::string m_default_value = "";
+
 };
 
 void Option::help_doc() {
@@ -149,7 +147,7 @@ OptionType Option::get_type(std::string opt) {
 std::string Option::get_destination(const std::string &first_option,
                                     const std::string &second_option,
                                     OptionType first_opt_type,
-                                    OptionType second_opt_type, int pos_args_count ) {
+                                    OptionType second_opt_type) {
   std::string dest;
 
   if (first_opt_type == OptionType::LONG_OPT) {
@@ -164,10 +162,8 @@ std::string Option::get_destination(const std::string &first_option,
     } else {
       if (first_opt_type == OptionType::POSITIONAL_OPT) {
         dest = first_option;
-        // dest =  "option_" +  std::to_string(pos_args_count);
       } else if (second_opt_type == OptionType::POSITIONAL_OPT) {
          dest = second_option;
-        // dest =  "option_" +  std::to_string(pos_args_count);
       }
     }
   }
@@ -181,6 +177,7 @@ class OptionParser {
  public:
   explicit OptionParser(std::string description = "", bool create_help = true)
       : m_options(0), m_description(std::move(description), pos_args_count = 1) {
+
     if (create_help) {
       add_option("--help", "-h").help("Display this help message and exit.");
     }
@@ -204,6 +201,7 @@ class OptionParser {
 
   void error(const std::string &e);
   int pos_args_count;
+    
   std::string fail_for_key(const std::string &key);
 
   Archive m_values;
@@ -234,7 +232,7 @@ Option &OptionParser::add_option_internal(const std::string &first_option,
   OptionType second_option_type = Option::get_type(second_option);
 
   opt.dest() = Option::get_destination(first_option, second_option,
-                                       first_option_type, second_option_type, pos_args_count);
+                                       first_option_type, second_option_type);
 
   if (first_option_type == OptionType::LONG_OPT) {
     opt.long_flag() = first_option;
