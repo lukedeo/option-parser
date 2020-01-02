@@ -59,7 +59,7 @@ struct Option {
 
   std::string &long_flag() { return m_long_flag; }
   std::string &pos_flag() { return m_pos_flag; }
-  std::string m_short_flag = "", m_long_flag = "",  m_pos_flag = "";
+  std::string m_short_flag = "", m_long_flag = "", m_pos_flag = "";
 
   StorageMode &mode() { return m_mode; }
 
@@ -160,15 +160,14 @@ std::string Option::get_destination(std::string first_option,
 
     } else if (second_opt_type == OptionType::SHORT_OPT) {
       dest = remove_character(second_option, '-') + "_option";
-    }
-    else {
-    if (first_opt_type == OptionType::POSITIONAL_OPT) {
-      dest =first_option;
+    } else {
+      if (first_opt_type == OptionType::POSITIONAL_OPT) {
+        dest = first_option;
 
-    } else if (second_opt_type == OptionType::POSITIONAL_OPT) {
-      dest = second_option;
+      } else if (second_opt_type == OptionType::POSITIONAL_OPT) {
+        dest = second_option;
+      }
     }
-   }
   }
 
   return dest;
@@ -333,7 +332,6 @@ bool OptionParser::try_to_get_opt(std::vector<std::string> &arguments,
 
   if (arguments[arg].find(flag) != 0) return false;
 
-
   if (option.mode() == STORE_TRUE) {
     option.found() = true;
     return true;
@@ -383,7 +381,8 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
   for (unsigned int i = 1; i < argc; ++i) {
     arguments.push_back(argv[i]);
   }
-  arguments.push_back(ARGS_END);  // dummy way to solve problem with last arg of  type "arg val1 val2"
+  arguments.push_back(ARGS_END);  // dummy way to solve problem with last arg of
+                                  // type "arg val1 val2"
 
   // for each argument cluster
   for (unsigned int arg = 0; arg < arguments.size(); ++arg) {

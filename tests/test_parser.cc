@@ -127,7 +127,8 @@ TEST_CASE("test parser functionality") {
 }
 
 TEST_CASE("test OO functionality") {
-  const char *argv[] = {"tests", "--flag asdsaflag", "bsadsad", "bqwewqeq", "--boolean", "--long l1 l2 l3"};
+  const char *argv[] = {"tests",    "--flag asdsaflag", "bsadsad",
+                        "bqwewqeq", "--boolean",        "--long l1 l2 l3"};
 
   auto argc = length(argv);
 
@@ -206,9 +207,9 @@ TEST_CASE_TEMPLATE("test typecasting functionality", T, int, double,
   CHECK(typeid(value) == typeid(T));
 }
 
-
 TEST_CASE("test short args") {
-  const char *argv[] = {"tests",  "-s", "test_str", "-m", "str1", "str2", "str3",  "-b",  "-l t1 t2 t3"};
+  const char *argv[] = {"tests", "-s",   "test_str", "-m",         "str1",
+                        "str2",  "str3", "-b",       "-l t1 t2 t3"};
 
   auto argc = length(argv);
 
@@ -231,8 +232,7 @@ TEST_CASE("test short args") {
   p.eat_arguments(argc, argv);
   CHECK(p.get_value("b_option"));
 
-
-  CHECK( p.get_value<std::string>("s_option") == "test_str");
+  CHECK(p.get_value<std::string>("s_option") == "test_str");
 
   auto names = p.get_value<std::vector<std::string>>("m_option");
   CHECK(names[0] == "str1");
@@ -243,17 +243,11 @@ TEST_CASE("test short args") {
   CHECK(qq[0] == "t1");
   CHECK(qq[1] == "t2");
   CHECK(qq[2] == "t3");
-  
-
-
-
-
 }
 
-
-
 TEST_CASE("test positional args") {
-  const char *argv[] = {"tests",  "pos1", "pos2", "-b", "pos3","7","-s","pos5","7", "5", "99" };
+  const char *argv[] = {"tests", "pos1", "pos2", "-b", "pos3", "7",
+                        "-s",    "pos5", "7",    "5",  "99"};
 
   auto argc = length(argv);
 
@@ -263,38 +257,35 @@ TEST_CASE("test positional args") {
   p.add_option("pos1")
       .help("just=flag")
       .mode(optionparser::StorageMode::STORE_TRUE);
-      
+
   p.add_option("-b")
       .help("just=flag")
       .mode(optionparser::StorageMode::STORE_TRUE);
-      
+
   p.add_option("-s")
       .help("just=flag")
       .mode(optionparser::StorageMode::STORE_TRUE);
   p.add_option("pos2")
       .help("just=flag")
       .mode(optionparser::StorageMode::STORE_TRUE);
-   p.add_option("pos3")
+  p.add_option("pos3")
       .help("just=flag")
       .mode(optionparser::StorageMode::STORE_VALUE);
 
-   p.add_option("pos4")
+  p.add_option("pos4")
       .help("just=flag")
       .mode(optionparser::StorageMode::STORE_VALUE);
-    p.add_option("pos5")
+  p.add_option("pos5")
       .help("just=flag")
       .mode(optionparser::StorageMode::STORE_MULT_VALUES);
-
 
   p.eat_arguments(argc, argv);
   CHECK(p.get_value("pos1"));
   CHECK(p.get_value("pos2"));
   CHECK(p.get_value<double>("pos3") == 7);
 
-
   auto names = p.get_value<std::vector<std::string>>("pos5");
   CHECK(names[0] == "7");
   CHECK(names[1] == "5");
-    CHECK(names[2] == "99");
-
+  CHECK(names[2] == "99");
 }
