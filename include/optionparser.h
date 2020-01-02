@@ -7,14 +7,8 @@
 #ifndef OPTIONPARSER_H_
 #define OPTIONPARSER_H_
 
-#include <algorithm>
-#include <cstdlib>
-#include <iomanip>
 #include <iostream>
 #include <map>
-#include <stdexcept>
-#include <string>
-#include <unordered_set>
 #include <vector>
 
 const std::string ARGS_END = "- ";

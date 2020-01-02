@@ -207,9 +207,11 @@ TEST_CASE_TEMPLATE("test typecasting functionality", T, int, double,
   CHECK(typeid(value) == typeid(T));
 }
 
+
 TEST_CASE("test short args") {
   const char *argv[] = {"tests", "-s",   "test_str", "-m",         "str1",
                         "str2",  "str3", "-b",       "-l t1 t2 t3"};
+
 
   auto argc = length(argv);
 
@@ -232,7 +234,9 @@ TEST_CASE("test short args") {
   p.eat_arguments(argc, argv);
   CHECK(p.get_value("b_option"));
 
+
   CHECK(p.get_value<std::string>("s_option") == "test_str");
+
 
   auto names = p.get_value<std::vector<std::string>>("m_option");
   CHECK(names[0] == "str1");
