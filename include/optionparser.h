@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <map>
+#include <numeric>
 #include <utility>
 #include <vector>
 
@@ -29,7 +30,7 @@ std::vector<std::string> split_str(std::string s,
 }
 } // namespace utils
 
-class OptionParserError : public std::runtime_error {
+class ParserError : public std::runtime_error {
   using std::runtime_error::runtime_error;
 };
 
@@ -198,14 +199,9 @@ private:
 
   void error(const std::string &e);
 
-  OptionParserError fail_for_key(const std::string &key);
-
-  Archive m_values;
-  int m_pos_args_count;
-  std::vector<Option> m_options;
-  std::string m_prog_name, m_description;
-  std::vector<std::string> pos_options_names;
-  std::map<std::string, unsigned int> idx;
+  ParserError fail_for_missing_key(const std::string &key);
+  ParserError fail_unrecognized_argument(const std::string &arg);
+  ParserError fail_missing_argument(const std::vector<std::string> &missing);
 
   bool get_value_arg(std::vector<std::string> &arguments, unsigned int &arg,
                      Option &opt, std::string &flag);
@@ -214,6 +210,13 @@ private:
                       Option &option, std::string &flag);
 
   void check_for_missing_args();
+
+  Archive m_values;
+  int m_pos_args_count;
+  std::vector<Option> m_options;
+  std::string m_prog_name, m_description;
+  std::vector<std::string> m_positional_options_names;
+  std::map<std::string, unsigned int> m_option_idx;
 };
 
 Option &OptionParser::add_option(const std::string &first_option,
@@ -245,12 +248,12 @@ Option &OptionParser::add_option_internal(const std::string &first_option,
   if (first_option_type == OptionType::POSITIONAL_OPT) {
     opt.pos_flag() = first_option;
     m_pos_args_count += 1;
-    pos_options_names.push_back(first_option);
+    m_positional_options_names.push_back(first_option);
   } else if (second_option_type == OptionType::POSITIONAL_OPT) {
     opt.pos_flag() = second_option;
     m_pos_args_count += 1;
 
-    pos_options_names.push_back(second_option);
+    m_positional_options_names.push_back(second_option);
   }
   return opt;
 }
@@ -276,9 +279,7 @@ bool OptionParser::get_value_arg(std::vector<std::string> &arguments,
       for (const auto &v : vals)
         m_values[opt.dest()].push_back(v);
     }
-  }
-
-  else {
+  } else {
     if (arg + 1 >= arguments.size()) {
       if (opt.default_value().empty()) {
         error("error, flag '" + flag + "' requires an argument.");
@@ -369,18 +370,14 @@ void OptionParser::check_for_missing_args() {
     }
   }
   if (!missing.empty()) {
-    std::string e = "Missing required flags: " + missing.at(0);
-    for (unsigned long i = 1; i < missing.size(); ++i) {
-      e += ", " + missing.at(i);
-    }
-    error(e + ".");
+    throw fail_missing_argument(missing);
   }
 }
 
 void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
   unsigned int idx_ctr = 0;
   for (auto &opt : m_options) {
-    idx[opt.dest()] = idx_ctr;
+    m_option_idx[opt.dest()] = idx_ctr;
     idx_ctr++;
   }
 
@@ -392,7 +389,7 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
     arguments.emplace_back(argv[i]);
   }
   arguments.push_back(args_end); // dummy way to solve problem with last arg of
-                                 // type "arg val1 val2"
+  // type "arg val1 val2"
 
   // for each argument cluster
   int pos_args = 1;
@@ -414,11 +411,13 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
     if (!match_found) {
       if (arguments[arg] != args_end) {
         if (m_pos_args_count > pos_args) {
-          m_options[idx.at(pos_options_names[pos_args - 1])].found() = true;
-          m_values[pos_options_names[pos_args - 1]].push_back(arguments[arg]);
+          m_options[m_option_idx.at(m_positional_options_names[pos_args - 1])]
+              .found() = true;
+          m_values[m_positional_options_names[pos_args - 1]].push_back(
+              arguments[arg]);
           pos_args++;
         } else
-          error("Unrecognized flag/option '" + arguments[arg] + "'");
+          throw fail_unrecognized_argument(arguments[arg]);
       }
     }
   }
@@ -432,14 +431,35 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
 void OptionParser::error(const std::string &e) {
   std::cerr << "In excecutable \'";
   std::cerr << m_prog_name << "\':\n" << e << std::endl;
+#ifndef OPTIONPARSER_THROW_ON_FAILURE
   exit(1);
+#endif
 }
 
-OptionParserError OptionParser::fail_for_key(const std::string &key) {
+ParserError OptionParser::fail_for_missing_key(const std::string &key) {
   auto msg = "Tried to access value for field '" + key +
              "' which is not a valid field.";
   error(msg);
-  return OptionParserError(msg);
+  return ParserError(msg);
+}
+
+ParserError OptionParser::fail_unrecognized_argument(const std::string &arg) {
+  auto msg = "Unrecognized flag/option '" + arg + "'";
+  error(msg);
+  return ParserError(msg);
+}
+
+ParserError
+OptionParser::fail_missing_argument(const std::vector<std::string> &missing) {
+  auto msg = "Missing required flags: " +
+             std::accumulate(missing.begin() + 1, missing.end(), missing.at(0),
+                             [](std::string &s,
+                                const std::string &piece) -> decltype(auto) {
+                               return s + ", " + piece;
+                             }) +
+             ".";
+  error(msg);
+  return ParserError(msg);
 }
 
 void OptionParser::help() {
@@ -476,9 +496,9 @@ void OptionParser::help() {
 //----------------------------------------------------------------------------
 template <class T> T OptionParser::get_value(const std::string &key) {
   try {
-    return m_options[idx.at(key)].found();
+    return m_options[m_option_idx.at(key)].found();
   } catch (std::out_of_range &err) {
-    throw fail_for_key(key);
+    throw fail_for_missing_key(key);
   }
 }
 //----------------------------------------------------------------------------
@@ -487,7 +507,7 @@ std::string OptionParser::get_value<std::string>(const std::string &key) {
   try {
     return m_values.at(key).at(0);
   } catch (std::out_of_range &err) {
-    throw fail_for_key(key);
+    throw fail_for_missing_key(key);
   }
 }
 //----------------------------------------------------------------------------
@@ -495,7 +515,7 @@ template <> double OptionParser::get_value<double>(const std::string &key) {
   try {
     return std::stod(m_values.at(key).at(0));
   } catch (std::out_of_range &err) {
-    throw fail_for_key(key);
+    throw fail_for_missing_key(key);
   }
 }
 //----------------------------------------------------------------------------
@@ -503,7 +523,7 @@ template <> float OptionParser::get_value<float>(const std::string &key) {
   try {
     return std::stof(m_values.at(key).at(0));
   } catch (std::out_of_range &err) {
-    throw fail_for_key(key);
+    throw fail_for_missing_key(key);
   }
 }
 //----------------------------------------------------------------------------
@@ -511,7 +531,7 @@ template <> int OptionParser::get_value<int>(const std::string &key) {
   try {
     return std::stoi(m_values.at(key).at(0));
   } catch (std::out_of_range &err) {
-    throw fail_for_key(key);
+    throw fail_for_missing_key(key);
   }
 }
 //----------------------------------------------------------------------------
@@ -520,7 +540,7 @@ unsigned int OptionParser::get_value<unsigned int>(const std::string &key) {
   try {
     return std::stoul(m_values.at(key).at(0));
   } catch (std::out_of_range &err) {
-    throw fail_for_key(key);
+    throw fail_for_missing_key(key);
   }
 }
 //----------------------------------------------------------------------------
@@ -530,7 +550,7 @@ OptionParser::get_value<std::vector<std::string>>(const std::string &key) {
   try {
     return m_values.at(key);
   } catch (std::out_of_range &err) {
-    throw fail_for_key(key);
+    throw fail_for_missing_key(key);
   }
 }
 //----------------------------------------------------------------------------
@@ -544,7 +564,7 @@ OptionParser::get_value<std::vector<int>>(const std::string &key) {
     }
     return std::move(v);
   } catch (std::out_of_range &err) {
-    throw fail_for_key(key);
+    throw fail_for_missing_key(key);
   }
 }
 
