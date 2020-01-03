@@ -3,9 +3,14 @@
 #include <iterator>
 
 #include "doctest.h"
+
+// Makes sure we don't exit on failures.
+#define OPTIONPARSER_THROW_ON_FAILURE
 #include "optionparser.h"
 
 template <class T, size_t N> constexpr size_t length(T (&)[N]) { return N; }
+
+
 
 TEST_CASE("test substring names") {
   SUBCASE("test boolean arg with long arg") {
@@ -67,6 +72,16 @@ TEST_CASE("test substring names") {
     p.add_option("pass").help(" positional boolean value");
     p.eat_arguments(argc, argv);
     CHECK(!p.get_value("pass"));
+  }
+
+  SUBCASE("test boolean positional arg which is not passed but is required") {
+    const char *argv[] = {"tests"};
+    int argc = length(argv);
+    optionparser::OptionParser p(
+        "A test to make sure that this option parser works");
+    p.add_option("pass").help(" positional boolean value").required(true);
+
+    CHECK_THROWS(p.eat_arguments(argc, argv));
   }
 
   SUBCASE("test many boolean  arg which ") {
@@ -243,6 +258,10 @@ TEST_CASE("test parser functionality") {
 
   if (p.get_value("boolean")) {
     CHECK(p.get_value<bool>("boolean"));
+  }
+
+  SUBCASE("fail on invalid arg") {
+    CHECK_THROWS(p.get_value("this-isnt-in-parser"));
   }
 }
 
