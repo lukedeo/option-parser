@@ -458,11 +458,11 @@ ParserError OptionParser::fail_unrecognized_argument(const std::string &arg) {
 ParserError
 OptionParser::fail_missing_argument(const std::vector<std::string> &missing) {
   auto msg = "Missing required flags: " +
-             std::accumulate(missing.begin() + 1, missing.end(), missing.at(0),
-                             [](std::string &s,
-                                const std::string &piece) -> decltype(auto) {
-                               return s + ", " + piece;
-                             }) +
+             std::accumulate(
+                 missing.begin() + 1, missing.end(), missing.at(0),
+                 [](std::string &s, const std::string &piece) -> std::string {
+                   return s + ", " + piece;
+                 }) +
              ".";
   try_to_exit_with_message(msg);
   return ParserError(msg);
