@@ -12,8 +12,9 @@
 #include <utility>
 #include <vector>
 
-const std::string ARGS_END = "- ";
+namespace optionparser {
 
+namespace utils {
 std::vector<std::string> split_str(std::string s,
                                    const std::string &delimiter = " ") {
   size_t pos = 0;
@@ -26,8 +27,7 @@ std::vector<std::string> split_str(std::string s,
   vals.push_back(s);
   return vals;
 }
-
-namespace optionparser {
+} // namespace utils
 
 class OptionParserError : public std::runtime_error {
   using std::runtime_error::runtime_error;
@@ -271,7 +271,7 @@ bool OptionParser::get_value_arg(std::vector<std::string> &arguments,
               ") require a '=' or space before a value.");
         return false;
       }
-      auto vals = split_str(arguments[arg].substr(search_pt + 1));
+      auto vals = utils::split_str(arguments[arg].substr(search_pt + 1));
       for (const auto &v : vals)
         m_values[opt.dest()].push_back(v);
     }
@@ -383,12 +383,14 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
     idx_ctr++;
   }
 
+  const std::string args_end = "- ";
+
   m_prog_name = argv[0];
   std::vector<std::string> arguments;
   for (unsigned int i = 1; i < argc; ++i) {
     arguments.emplace_back(argv[i]);
   }
-  arguments.push_back(ARGS_END); // dummy way to solve problem with last arg of
+  arguments.push_back(args_end); // dummy way to solve problem with last arg of
                                  // type "arg val1 val2"
 
   // for each argument cluster
@@ -409,7 +411,7 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
     }
 
     if (!match_found) {
-      if (arguments[arg] != ARGS_END) {
+      if (arguments[arg] != args_end) {
         if (pos_args_count > pos_args) {
           m_options[idx.at(pos_options_names[pos_args - 1])].found() = true;
           m_values[pos_options_names[pos_args - 1]].push_back(arguments[arg]);
