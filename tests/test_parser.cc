@@ -5,19 +5,22 @@
 #include "doctest.h"
 
 // Makes sure we don't exit on failures.
-#define OPTIONPARSER_THROW_ON_FAILURE
 #include "optionparser.h"
 
 template <class T, size_t N> constexpr size_t length(T (&)[N]) { return N; }
 
-
+optionparser::OptionParser parser() {
+  optionparser::OptionParser p(
+      "A test to make sure that this option parser works");
+  p.throw_on_failure();
+  return p;
+}
 
 TEST_CASE("test substring names") {
   SUBCASE("test boolean arg with long arg") {
     const char *argv[] = {"tests", "--boolean"};
     int argc = length(argv);
-    optionparser::OptionParser p(
-        "A test to make sure that this option parser works");
+    auto p = parser();
     p.add_option("--boolean").help(" boolean value");
 
     p.eat_arguments(argc, argv);
@@ -27,8 +30,7 @@ TEST_CASE("test substring names") {
   SUBCASE("test boolean arg with short arg") {
     const char *argv[] = {"tests", "-b"};
     int argc = length(argv);
-    optionparser::OptionParser p(
-        "A test to make sure that this option parser works");
+    auto p = parser();
     p.add_option("-b").help(" boolean value");
     p.eat_arguments(argc, argv);
     CHECK(p.get_value("b_option"));
@@ -37,8 +39,7 @@ TEST_CASE("test substring names") {
   SUBCASE("test boolean arg with both short  and long arg pass long") {
     const char *argv[] = {"tests", "--boolean"};
     int argc = length(argv);
-    optionparser::OptionParser p(
-        "A test to make sure that this option parser works");
+    auto p = parser();
     p.add_option("--boolean", "-b").help(" boolean value");
     p.eat_arguments(argc, argv);
     CHECK(p.get_value("boolean"));
@@ -47,8 +48,7 @@ TEST_CASE("test substring names") {
   SUBCASE("test boolean arg with both short  and long arg pass short") {
     const char *argv[] = {"tests", "-b"};
     int argc = length(argv);
-    optionparser::OptionParser p(
-        "A test to make sure that this option parser works");
+    auto p = parser();
     p.add_option("--boolean", "-b").help(" boolean value");
     p.eat_arguments(argc, argv);
     CHECK(p.get_value("boolean"));
@@ -57,8 +57,7 @@ TEST_CASE("test substring names") {
   SUBCASE("test boolean positional arg ") {
     const char *argv[] = {"tests", "passed_bool_value"};
     int argc = length(argv);
-    optionparser::OptionParser p(
-        "A test to make sure that this option parser works");
+    auto p = parser();
     p.add_option("pass").help(" positional boolean value");
     p.eat_arguments(argc, argv);
     CHECK(p.get_value("pass"));
@@ -67,8 +66,7 @@ TEST_CASE("test substring names") {
   SUBCASE("test boolean positional arg which is not passed") {
     const char *argv[] = {"tests"};
     int argc = length(argv);
-    optionparser::OptionParser p(
-        "A test to make sure that this option parser works");
+    auto p = parser();
     p.add_option("pass").help(" positional boolean value");
     p.eat_arguments(argc, argv);
     CHECK(!p.get_value("pass"));
@@ -77,10 +75,8 @@ TEST_CASE("test substring names") {
   SUBCASE("test boolean positional arg which is not passed but is required") {
     const char *argv[] = {"tests"};
     int argc = length(argv);
-    optionparser::OptionParser p(
-        "A test to make sure that this option parser works");
+    auto p = parser();
     p.add_option("pass").help(" positional boolean value").required(true);
-
     CHECK_THROWS(p.eat_arguments(argc, argv));
   }
 
@@ -91,8 +87,7 @@ TEST_CASE("test substring names") {
         "-f",
     };
     int argc = length(argv);
-    optionparser::OptionParser p(
-        "A test to make sure that this option parser works");
+    auto p = parser();
     p.add_option("--first", "-f").help(" first boolean value");
     p.add_option("-s", "--second").help(" second boolean value");
     p.add_option("--third").help(" third boolean value");
@@ -109,8 +104,7 @@ TEST_CASE("test substring names") {
     const char *argv[] = {"tests", "--second", "-f",         "first_pos",
                           "72",    "--third",  "test_string"};
     int argc = length(argv);
-    optionparser::OptionParser p(
-        "A test to make sure that this option parser works");
+    auto p = parser();
     p.add_option("--first", "-f").help(" first boolean value");
     p.add_option("-s", "--second").help(" second boolean value");
     p.add_option("--third").help(" third boolean value");
@@ -139,8 +133,7 @@ TEST_CASE("test substring names") {
   };
   int argc = length(argv);
 
-  optionparser::OptionParser p(
-      "A test to make sure that this option parser works");
+  auto p = parser();
 
   p.add_option("--flag", "-f").help("just flag");
   p.add_option("flag1").help("just flag with substring for name");
@@ -171,8 +164,7 @@ TEST_CASE("test parser functionality") {
 
   int argc = length(argv);
 
-  optionparser::OptionParser p(
-      "A test to make sure that this option parser works");
+  auto p = parser();
 
   p.add_option("--flag", "-f").help("just flag");
   p.add_option("--boolean", "-b")
@@ -271,8 +263,7 @@ TEST_CASE("test OO functionality") {
 
   auto argc = length(argv);
 
-  optionparser::OptionParser p(
-      "A test to make sure that this option parser works");
+  auto p = parser();
 
   p.add_option("--flag", "-f")
       .help("just=flag")
@@ -322,8 +313,7 @@ TEST_CASE_TEMPLATE("test typecasting functionality", T, int, double,
 
   auto argc = length(argv);
 
-  optionparser::OptionParser p(
-      "A test to make sure that this option parser works");
+  auto p = parser();
 
   p.add_option("--flag", "-f")
       .help("just=flag")
@@ -344,8 +334,7 @@ TEST_CASE("test short args") {
 
   auto argc = length(argv);
 
-  optionparser::OptionParser p(
-      "A test to make sure that this option parser works");
+  auto p = parser();
 
   p.add_option("-b")
       .help("just=flag")
@@ -382,8 +371,7 @@ TEST_CASE("test OO functionality") {
 
   auto argc = length(argv);
 
-  optionparser::OptionParser p(
-      "A test to make sure that this option parser works");
+  auto p = parser();
 
   p.add_option("pos").help("just=flag");
 

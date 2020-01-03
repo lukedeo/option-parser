@@ -175,8 +175,7 @@ class OptionParser {
 public:
   explicit OptionParser(std::string description = "", bool create_help = true)
       : m_options(0), m_description(std::move(description)),
-        m_pos_args_count(1) {
-
+        m_pos_args_count(1), m_exit_on_failure(true) {
     if (create_help) {
       add_option("--help", "-h").help("Display this help message and exit.");
     }
@@ -193,11 +192,14 @@ public:
 
   void help();
 
+  OptionParser &exit_on_failure(bool exit = true);
+  OptionParser &throw_on_failure(bool throw_ = true);
+
 private:
   Option &add_option_internal(const std::string &first_option,
                               const std::string &second_option);
 
-  void error(const std::string &e);
+  void try_to_exit_with_message(const std::string &e);
 
   ParserError fail_for_missing_key(const std::string &key);
   ParserError fail_unrecognized_argument(const std::string &arg);
@@ -217,6 +219,7 @@ private:
   std::string m_prog_name, m_description;
   std::vector<std::string> m_positional_options_names;
   std::map<std::string, unsigned int> m_option_idx;
+  bool m_exit_on_failure;
 };
 
 Option &OptionParser::add_option(const std::string &first_option,
@@ -271,18 +274,20 @@ bool OptionParser::get_value_arg(std::vector<std::string> &arguments,
       search_pt = arguments[arg].find_first_of(' ');
 
       if (search_pt == std::string::npos) {
-        error("Error, long options (" + flag +
-              ") require a '=' or space before a value.");
+        try_to_exit_with_message("Error, long options (" + flag +
+                                 ") require a '=' or space before a value.");
         return false;
       }
       auto vals = utils::split_str(arguments[arg].substr(search_pt + 1));
-      for (const auto &v : vals)
+      for (const auto &v : vals) {
         m_values[opt.dest()].push_back(v);
+      }
     }
   } else {
     if (arg + 1 >= arguments.size()) {
       if (opt.default_value().empty()) {
-        error("error, flag '" + flag + "' requires an argument.");
+        try_to_exit_with_message("error, flag '" + flag +
+                                 "' requires an argument.");
         return false;
       }
       if (m_values[opt.dest()].empty()) {
@@ -291,7 +296,8 @@ bool OptionParser::get_value_arg(std::vector<std::string> &arguments,
     } else {
       if (arguments[arg + 1][0] == '-') {
         if (opt.default_value().empty()) {
-          error("error, flag '" + flag + "' requires an argument.");
+          try_to_exit_with_message("error, flag '" + flag +
+                                   "' requires an argument.");
           return false;
         }
         if (m_values[opt.dest()].empty()) {
@@ -428,24 +434,24 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
   check_for_missing_args();
 }
 //----------------------------------------------------------------------------
-void OptionParser::error(const std::string &e) {
-  std::cerr << "In excecutable \'";
-  std::cerr << m_prog_name << "\':\n" << e << std::endl;
-#ifndef OPTIONPARSER_THROW_ON_FAILURE
-  exit(1);
-#endif
+void OptionParser::try_to_exit_with_message(const std::string &e) {
+  if (m_exit_on_failure) {
+    std::cerr << "In excecutable \'";
+    std::cerr << m_prog_name << "\':\n" << e << std::endl;
+    exit(1);
+  }
 }
 
 ParserError OptionParser::fail_for_missing_key(const std::string &key) {
   auto msg = "Tried to access value for field '" + key +
              "' which is not a valid field.";
-  error(msg);
+  try_to_exit_with_message(msg);
   return ParserError(msg);
 }
 
 ParserError OptionParser::fail_unrecognized_argument(const std::string &arg) {
   auto msg = "Unrecognized flag/option '" + arg + "'";
-  error(msg);
+  try_to_exit_with_message(msg);
   return ParserError(msg);
 }
 
@@ -458,7 +464,7 @@ OptionParser::fail_missing_argument(const std::vector<std::string> &missing) {
                                return s + ", " + piece;
                              }) +
              ".";
-  error(msg);
+  try_to_exit_with_message(msg);
   return ParserError(msg);
 }
 
@@ -491,6 +497,16 @@ void OptionParser::help() {
     option.help_doc();
   }
   exit(0);
+}
+
+OptionParser &OptionParser::exit_on_failure(bool exit) {
+  m_exit_on_failure = exit;
+  return *this;
+}
+
+OptionParser &OptionParser::throw_on_failure(bool throw_) {
+  m_exit_on_failure = !throw_;
+  return *this;
 }
 
 //----------------------------------------------------------------------------
