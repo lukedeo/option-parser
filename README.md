@@ -57,7 +57,6 @@ After you `p.add_option("--foo", "-f")`, you can chain additional statements. Th
 Some things I'd love to have but don't have the time to do (in order of priority):
 
 * Documentation! The library has a small surface area, but people shouldn't have to dig through a header file to find out how to do things...
-* Additional tests.
-* Positional arguments.
+* A proper `CMakeLists.txt` file.
 * Subparsers, though nice, might not be possible given the library structure.
 
