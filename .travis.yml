@@ -7,5 +7,5 @@ compiler:
 language: cpp
 dist: trusty
 script:
-  - $CXX -std=c++11 -I ./ tests/test_parser.cc -o run-test
+  - $CXX -std=c++11 -I ./include -I ./doctest tests/test_parser.cc -o run-test
   - ./run-test
