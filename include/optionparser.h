@@ -173,7 +173,8 @@ std::string Option::get_destination(const std::string &first_option,
 class OptionParser {
 public:
   explicit OptionParser(std::string description = "", bool create_help = true)
-      : m_options(0), m_description(std::move(description)), pos_args_count(1) {
+      : m_options(0), m_description(std::move(description)),
+        m_pos_args_count(1) {
 
     if (create_help) {
       add_option("--help", "-h").help("Display this help message and exit.");
@@ -200,7 +201,7 @@ private:
   OptionParserError fail_for_key(const std::string &key);
 
   Archive m_values;
-  int pos_args_count;
+  int m_pos_args_count;
   std::vector<Option> m_options;
   std::string m_prog_name, m_description;
   std::vector<std::string> pos_options_names;
@@ -243,11 +244,11 @@ Option &OptionParser::add_option_internal(const std::string &first_option,
   }
   if (first_option_type == OptionType::POSITIONAL_OPT) {
     opt.pos_flag() = first_option;
-    pos_args_count += 1;
+    m_pos_args_count += 1;
     pos_options_names.push_back(first_option);
   } else if (second_option_type == OptionType::POSITIONAL_OPT) {
     opt.pos_flag() = second_option;
-    pos_args_count += 1;
+    m_pos_args_count += 1;
 
     pos_options_names.push_back(second_option);
   }
@@ -412,7 +413,7 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
 
     if (!match_found) {
       if (arguments[arg] != args_end) {
-        if (pos_args_count > pos_args) {
+        if (m_pos_args_count > pos_args) {
           m_options[idx.at(pos_options_names[pos_args - 1])].found() = true;
           m_values[pos_options_names[pos_args - 1]].push_back(arguments[arg]);
           pos_args++;
