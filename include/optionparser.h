@@ -637,7 +637,6 @@ OptionParser &OptionParser::throw_on_failure(bool throw_) {
   return *this;
 }
 
-// Provide all template specializations for get_value<T>(keyName)
 template <class T> T OptionParser::get_value(const std::string &key) {
   try {
     return m_options[m_option_idx.at(key)].found();
@@ -646,71 +645,51 @@ template <class T> T OptionParser::get_value(const std::string &key) {
   }
 }
 
-template <>
-std::string OptionParser::get_value<std::string>(const std::string &key) {
-  try {
-    return m_values.at(key).at(0);
-  } catch (std::out_of_range &err) {
-    throw fail_for_missing_key(key);
-  }
-}
+// Provide all template specializations for get_value<T>(keyName)
 
-template <> double OptionParser::get_value<double>(const std::string &key) {
-  try {
-    return std::stod(m_values.at(key).at(0));
-  } catch (std::out_of_range &err) {
-    throw fail_for_missing_key(key);
+#define GET_VALUE_SPECIALIZE(type, code)                                       \
+  template <> type OptionParser::get_value<type>(const std::string &key) {     \
+    try {                                                                      \
+      code                                                                     \
+    } catch (std::out_of_range & err) {                                        \
+      throw fail_for_missing_key(key);                                         \
+    }                                                                          \
   }
-}
 
-template <> float OptionParser::get_value<float>(const std::string &key) {
-  try {
-    return std::stof(m_values.at(key).at(0));
-  } catch (std::out_of_range &err) {
-    throw fail_for_missing_key(key);
-  }
-}
+GET_VALUE_SPECIALIZE(std::string, { return m_values.at(key).at(0); })
 
-template <> int OptionParser::get_value<int>(const std::string &key) {
-  try {
-    return std::stoi(m_values.at(key).at(0));
-  } catch (std::out_of_range &err) {
-    throw fail_for_missing_key(key);
-  }
-}
+GET_VALUE_SPECIALIZE(const char *, { return m_values.at(key).at(0).c_str(); })
 
-template <>
-unsigned int OptionParser::get_value<unsigned int>(const std::string &key) {
-  try {
-    return std::stoul(m_values.at(key).at(0));
-  } catch (std::out_of_range &err) {
-    throw fail_for_missing_key(key);
-  }
-}
+GET_VALUE_SPECIALIZE(double, { return std::stod(m_values.at(key).at(0)); })
 
-template <>
-std::vector<std::string>
-OptionParser::get_value<std::vector<std::string>>(const std::string &key) {
-  try {
-    return m_values.at(key);
-  } catch (std::out_of_range &err) {
-    throw fail_for_missing_key(key);
-  }
-}
+GET_VALUE_SPECIALIZE(float, { return std::stof(m_values.at(key).at(0)); })
 
-template <>
-std::vector<int>
-OptionParser::get_value<std::vector<int>>(const std::string &key) {
-  try {
-    std::vector<int> v;
-    for (auto &entry : m_values.at(key)) {
-      v.push_back(std::stoi(entry));
-    }
-    return std::move(v);
-  } catch (std::out_of_range &err) {
-    throw fail_for_missing_key(key);
-  }
-}
+GET_VALUE_SPECIALIZE(int, { return std::stoi(m_values.at(key).at(0)); })
+
+GET_VALUE_SPECIALIZE(unsigned int,
+                     { return std::stoul(m_values.at(key).at(0)); })
+
+GET_VALUE_SPECIALIZE(std::vector<std::string>, { return m_values.at(key); })
+
+#define GET_VALUE_SPECIALIZE_VECTOR(type, converter)                           \
+  GET_VALUE_SPECIALIZE(std::vector<type>, {                                    \
+    std::vector<type> v;                                                       \
+    for (auto &entry : m_values.at(key)) {                                     \
+      v.push_back(converter(entry));                                           \
+    }                                                                          \
+    return std::move(v);                                                       \
+  })
+
+GET_VALUE_SPECIALIZE_VECTOR(const char *,
+                            [](const std::string &s) { return s.c_str(); })
+
+GET_VALUE_SPECIALIZE_VECTOR(int, std::stoi)
+
+GET_VALUE_SPECIALIZE_VECTOR(unsigned int, std::stoul)
+
+GET_VALUE_SPECIALIZE_VECTOR(float, std::stof)
+
+GET_VALUE_SPECIALIZE_VECTOR(double, std::stod)
 
 } // end namespace optionparser
 
