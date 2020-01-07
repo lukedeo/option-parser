@@ -10,12 +10,16 @@
 #include <iostream>
 #include <map>
 #include <numeric>
+#include <sstream>
 #include <utility>
 #include <vector>
 
 namespace optionparser {
 
+// The utils::* namespace contains general utilities not necessarily useful
+// outside the main scope of the library
 namespace utils {
+
 std::vector<std::string> split_str(std::string s,
                                    const std::string &delimiter = " ") {
   size_t pos = 0;
@@ -28,55 +32,122 @@ std::vector<std::string> split_str(std::string s,
   vals.push_back(s);
   return vals;
 }
-} // namespace utils
 
+std::string stitch_str(const std::vector<std::string> &text,
+                       unsigned max_per_line = 80,
+                       const std::string &leading_str = "") {
+  std::vector<std::string> result;
+
+  std::string line_value;
+  for (const auto &token : text) {
+    if (line_value.empty()) {
+      line_value = (leading_str + token);
+      continue;
+    }
+
+    auto hypothetical_line = line_value;
+    hypothetical_line.append(" " + token);
+
+    if (hypothetical_line.size() > max_per_line) {
+      // In this case, we were better off before
+      result.emplace_back(line_value);
+      line_value = (leading_str + token);
+    } else {
+      line_value = hypothetical_line;
+    }
+  }
+  // Collect the last line since we don't track indices in the loop proper.
+  result.emplace_back(line_value);
+  return std::accumulate(
+      result.begin() + 1, result.end(), result.at(0),
+      [](std::string &s, const std::string &piece) -> std::string {
+        return s + "\n" + piece;
+      });
+}
+
+} // end namespace utils
+
+// Define a thin error for any sort of parser error that arises
 class ParserError : public std::runtime_error {
   using std::runtime_error::runtime_error;
 };
 
+// Enums for Option config
 enum StorageMode { STORE_TRUE = 0, STORE_VALUE, STORE_MULT_VALUES };
 enum OptionType { LONG_OPT = 0, SHORT_OPT, POSITIONAL_OPT, EMPTY_OPT };
 
-typedef std::map<std::string, std::vector<std::string>> Archive;
-
+// Option class definition
 class Option {
 public:
   Option() = default;
 
-  void help_doc();
+  std::string help_doc();
 
-  std::string m_short_flag = "", m_long_flag = "", m_pos_flag = "";
   std::string &short_flag() { return m_short_flag; }
   std::string &long_flag() { return m_long_flag; }
   std::string &pos_flag() { return m_pos_flag; }
 
-  bool &found() { return m_found; }
+  bool found() { return m_found; }
+  Option &found(bool found) {
+    m_found = found;
+    return *this;
+  }
 
-  StorageMode &mode() { return m_mode; }
+  StorageMode mode() { return m_mode; }
   Option &mode(const StorageMode &mode) {
     m_mode = mode;
     return *this;
   }
 
-  bool &required() { return m_required; }
+  bool required() { return m_required; }
   Option &required(bool req) {
     m_required = req;
     return *this;
   }
 
-  std::string &help() { return m_help; }
+  std::string metavar() {
+    std::string formatted_metavar;
+    if (!m_metavar.empty()) {
+      if (m_mode == STORE_TRUE) {
+        return "";
+      }
+      formatted_metavar = m_metavar;
+    } else {
+      for (const auto &cand :
+           {m_dest, m_pos_flag, m_long_flag, std::string("ARG")}) {
+        if (!cand.empty()) {
+          formatted_metavar = cand.substr(cand.find_first_not_of('-'));
+          std::transform(formatted_metavar.begin(), formatted_metavar.end(),
+                         formatted_metavar.begin(), ::toupper);
+          break;
+        }
+      }
+    }
+    if (m_mode == STORE_MULT_VALUES) {
+      formatted_metavar = (formatted_metavar + "1 [" + formatted_metavar +
+                           "2, " + formatted_metavar + "3, ...]");
+    }
+    return formatted_metavar;
+  }
+
+  Option &metavar(const std::string &mvar) {
+    m_metavar = mvar;
+    return *this;
+  }
+
+  std::string help() { return m_help; }
   Option &help(const std::string &help) {
     m_help = help;
     return *this;
   }
 
-  std::string &dest() { return m_dest; }
+  std::string dest() { return m_dest; }
   Option &dest(const std::string &dest) {
     m_dest = dest;
     return *this;
   }
 
-  std::string &default_value() { return m_default_value; }
+  std::string default_value() { return m_default_value; }
 
   Option &default_value(const std::string &default_value) {
     m_default_value = default_value;
@@ -95,9 +166,9 @@ public:
 
   static OptionType get_type(std::string opt);
   static std::string get_destination(const std::string &first_option,
-                                     const std::string &second_option,
-                                     OptionType first_opt_type,
-                                     OptionType second_opt_type);
+                                     const std::string &second_option);
+  static void validate_option_types(const OptionType &first_option_type,
+                                    const OptionType &second_option_type);
 
 private:
   bool m_found = false;
@@ -106,9 +177,15 @@ private:
   std::string m_help = "";
   std::string m_dest = "";
   std::string m_default_value = "";
+  std::string m_metavar = "";
+
+  std::string m_short_flag = "";
+  std::string m_long_flag = "";
+  std::string m_pos_flag = "";
 };
 
-void Option::help_doc() {
+// Non-inline definitions for Option methods
+std::string Option::help_doc() {
   std::string h = "    ";
   if (!m_long_flag.empty()) {
     h += m_long_flag;
@@ -119,8 +196,17 @@ void Option::help_doc() {
   if (!m_short_flag.empty()) {
     h += m_short_flag;
   }
+  if (!m_pos_flag.empty()) {
+    h += m_pos_flag;
+  }
 
-  printf("%-25s%s\n", h.c_str(), m_help.c_str());
+  auto arg_buf = std::max(h.length() + 1, static_cast<unsigned long>(25));
+  auto help_str = utils::stitch_str(utils::split_str(m_help), arg_buf + 50,
+                                    std::string(arg_buf, ' '));
+  char char_buf[h.length() + help_str.length() + 100];
+  sprintf(char_buf, ("%-" + std::to_string(arg_buf) + "s%s\n").c_str(),
+          h.c_str(), help_str.substr(arg_buf).c_str());
+  return std::string(char_buf);
 }
 
 OptionType Option::get_type(std::string opt) {
@@ -141,11 +227,34 @@ OptionType Option::get_type(std::string opt) {
 
   return OptionType::POSITIONAL_OPT;
 }
+
+void Option::validate_option_types(const OptionType &first_option_type,
+                                   const OptionType &second_option_type) {
+
+  auto err = [](const std::string &msg) {
+    throw std::runtime_error("Parser inconsistency: " + msg);
+  };
+  if (first_option_type == OptionType::EMPTY_OPT) {
+    err("Cannot have first option be empty.");
+  }
+  if (first_option_type == OptionType::POSITIONAL_OPT &&
+      second_option_type != OptionType::EMPTY_OPT) {
+    err("Positional arguments can only have one option, found non-empty second "
+        "option.");
+  }
+  if (second_option_type == OptionType::POSITIONAL_OPT) {
+    err("Cannot have second option be a positional option.");
+  }
+}
+
 std::string Option::get_destination(const std::string &first_option,
-                                    const std::string &second_option,
-                                    OptionType first_opt_type,
-                                    OptionType second_opt_type) {
+                                    const std::string &second_option) {
   std::string dest;
+
+  auto first_opt_type = Option::get_type(first_option);
+  auto second_opt_type = Option::get_type(second_option);
+
+  validate_option_types(first_opt_type, second_opt_type);
 
   if (first_opt_type == OptionType::LONG_OPT) {
     dest = first_option.substr(2);
@@ -157,10 +266,12 @@ std::string Option::get_destination(const std::string &first_option,
     } else if (second_opt_type == OptionType::SHORT_OPT) {
       dest = second_option.substr(1) + "_option";
     } else {
-      if (first_opt_type == OptionType::POSITIONAL_OPT) {
+      if (first_opt_type == OptionType::POSITIONAL_OPT &&
+          second_opt_type == OptionType::EMPTY_OPT) {
         dest = first_option;
-      } else if (second_opt_type == OptionType::POSITIONAL_OPT) {
-        dest = second_option;
+      } else {
+        std::string msg = "Parser inconsistency error.";
+        throw std::runtime_error(msg);
       }
     }
   }
@@ -168,9 +279,7 @@ std::string Option::get_destination(const std::string &first_option,
   return dest;
 }
 
-//-----------------------------------------------------------------------------
-//  OptionParser Class
-//-----------------------------------------------------------------------------
+// OptionParser class definition
 class OptionParser {
 public:
   explicit OptionParser(std::string description = "", bool create_help = true)
@@ -188,11 +297,13 @@ public:
   Option &add_option(const std::string &first_option,
                      const std::string &second_option = "");
 
+  // We template-specialize these later
   template <class T = bool> T get_value(const std::string &key);
 
   void help();
 
   OptionParser &exit_on_failure(bool exit = true);
+
   OptionParser &throw_on_failure(bool throw_ = true);
 
 private:
@@ -202,8 +313,11 @@ private:
   void try_to_exit_with_message(const std::string &e);
 
   ParserError fail_for_missing_key(const std::string &key);
+
   ParserError fail_unrecognized_argument(const std::string &arg);
-  ParserError fail_missing_argument(const std::vector<std::string> &missing);
+
+  ParserError
+  fail_for_missing_arguments(const std::vector<std::string> &missing_flags);
 
   bool get_value_arg(std::vector<std::string> &arguments, unsigned int &arg,
                      Option &opt, std::string &flag);
@@ -213,7 +327,7 @@ private:
 
   void check_for_missing_args();
 
-  Archive m_values;
+  std::map<std::string, std::vector<std::string>> m_values;
   int m_pos_args_count;
   std::vector<Option> m_options;
   std::string m_prog_name, m_description;
@@ -222,6 +336,7 @@ private:
   bool m_exit_on_failure;
 };
 
+// Define methods non-inline
 Option &OptionParser::add_option(const std::string &first_option,
                                  const std::string &second_option) {
   return add_option_internal(first_option, second_option);
@@ -234,8 +349,12 @@ Option &OptionParser::add_option_internal(const std::string &first_option,
   OptionType first_option_type = Option::get_type(first_option);
   OptionType second_option_type = Option::get_type(second_option);
 
-  opt.dest() = Option::get_destination(first_option, second_option,
-                                       first_option_type, second_option_type);
+  try {
+    opt.dest(Option::get_destination(first_option, second_option));
+  } catch (const std::runtime_error &err) {
+    try_to_exit_with_message(err.what());
+    throw err;
+  }
 
   if (first_option_type == OptionType::LONG_OPT) {
     opt.long_flag() = first_option;
@@ -252,11 +371,6 @@ Option &OptionParser::add_option_internal(const std::string &first_option,
     opt.pos_flag() = first_option;
     m_pos_args_count += 1;
     m_positional_options_names.push_back(first_option);
-  } else if (second_option_type == OptionType::POSITIONAL_OPT) {
-    opt.pos_flag() = second_option;
-    m_pos_args_count += 1;
-
-    m_positional_options_names.push_back(second_option);
   }
   return opt;
 }
@@ -311,17 +425,13 @@ bool OptionParser::get_value_arg(std::vector<std::string> &arguments,
     m_values[opt.dest()].push_back(val);
     return true;
   }
-  bool is_pos = false;
+  int arg_distance = 0;
   while (arguments[arg + 1][0] != '-') {
-    for (auto &o : m_options) {
-      if (arguments[arg + 1] == o.pos_flag()) {
-        is_pos = true;
-      }
-    }
-    if (is_pos) {
+    arg++;
+    if (arg_distance && (opt.mode() != StorageMode::STORE_MULT_VALUES)) {
       break;
     }
-    arg++;
+    arg_distance++;
     m_values[opt.dest()].push_back(arguments[arg]);
     if (arg + 1 >= arguments.size()) {
       break;
@@ -344,12 +454,12 @@ bool OptionParser::try_to_get_opt(std::vector<std::string> &arguments,
 
   if (!option.pos_flag().empty()) {
     m_values[option.dest()].push_back(option.pos_flag());
-    option.found() = true;
+    option.found(true);
     return true;
   }
 
   if (option.mode() == STORE_TRUE) {
-    option.found() = true;
+    option.found(true);
     return true;
   }
 
@@ -357,7 +467,7 @@ bool OptionParser::try_to_get_opt(std::vector<std::string> &arguments,
        (option.mode() == STORE_MULT_VALUES)) &&
       !option.found()) {
     if (get_value_arg(arguments, arg, option, flag)) {
-      option.found() = true;
+      option.found(true);
       return true;
     }
   }
@@ -372,11 +482,11 @@ void OptionParser::check_for_missing_args() {
       missing.push_back(opt.dest());
     } else if ((!opt.default_value().empty()) && (!opt.found())) {
       m_values[opt.dest()].push_back(opt.default_value());
-      opt.found() = true;
+      opt.found(true);
     }
   }
   if (!missing.empty()) {
-    throw fail_missing_argument(missing);
+    throw fail_for_missing_arguments(missing);
   }
 }
 
@@ -388,14 +498,11 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
   }
 
   const std::string args_end = "- ";
-
   m_prog_name = argv[0];
-  std::vector<std::string> arguments;
-  for (unsigned int i = 1; i < argc; ++i) {
-    arguments.emplace_back(argv[i]);
-  }
-  arguments.push_back(args_end); // dummy way to solve problem with last arg of
-  // type "arg val1 val2"
+  std::vector<std::string> arguments(argv + 1, argv + argc);
+
+  // dummy way to solve problem with last arg of
+  arguments.emplace_back(args_end);
 
   // for each argument cluster
   int pos_args = 1;
@@ -418,7 +525,7 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
       if (arguments[arg] != args_end) {
         if (m_pos_args_count > pos_args) {
           m_options[m_option_idx.at(m_positional_options_names[pos_args - 1])]
-              .found() = true;
+              .found(true);
           m_values[m_positional_options_names[pos_args - 1]].push_back(
               arguments[arg]);
           pos_args++;
@@ -433,7 +540,7 @@ void OptionParser::eat_arguments(unsigned int argc, char const *argv[]) {
   }
   check_for_missing_args();
 }
-//----------------------------------------------------------------------------
+
 void OptionParser::try_to_exit_with_message(const std::string &e) {
   if (m_exit_on_failure) {
     std::cerr << "In excecutable \'";
@@ -455,47 +562,68 @@ ParserError OptionParser::fail_unrecognized_argument(const std::string &arg) {
   return ParserError(msg);
 }
 
-ParserError
-OptionParser::fail_missing_argument(const std::vector<std::string> &missing) {
-  auto msg = "Missing required flags: " +
-             std::accumulate(
-                 missing.begin() + 1, missing.end(), missing.at(0),
-                 [](std::string &s, const std::string &piece) -> std::string {
-                   return s + ", " + piece;
-                 }) +
-             ".";
+ParserError OptionParser::fail_for_missing_arguments(
+    const std::vector<std::string> &missing_flags) {
+  auto msg =
+      "Missing required flags: " +
+      std::accumulate(
+          missing_flags.begin() + 1, missing_flags.end(), missing_flags.at(0),
+          [](std::string &s, const std::string &piece) -> std::string {
+            return s + ", " + piece;
+          }) +
+      ".";
   try_to_exit_with_message(msg);
   return ParserError(msg);
 }
 
 void OptionParser::help() {
   auto split = m_prog_name.find_last_of('/');
-  std::string stripped_name = m_prog_name.substr(split + 1);
-  std::cout << "usage: " << stripped_name << " [-h] ";
-  for (auto &option : m_options) {
-    if (option.required()) {
-      if (!option.short_flag().empty()) {
-        std::cout << option.short_flag();
-      } else {
-        std::cout << option.long_flag();
-      }
+  std::stringstream leading;
 
-      if (option.mode() == STORE_VALUE) {
-        std::cout << " ARG ";
-      }
-      if (option.mode() == STORE_MULT_VALUES) {
-        std::cout << " ARG1 [ARG2 ...] ";
-      }
+  leading << "usage: " << m_prog_name.substr(split + 1) << " ";
+  std::string usage_str = leading.str();
+  std::cout << usage_str;
+
+  std::vector<std::string> option_usage;
+  for (auto &option : m_options) {
+    std::stringstream optss;
+    optss << (option.required() ? "" : "[");
+    if (!option.short_flag().empty()) {
+      optss << option.short_flag();
+    } else if (!option.long_flag().empty()) {
+      optss << option.long_flag();
     }
+    if (option.mode() != StorageMode::STORE_TRUE) {
+      optss << (option.pos_flag().empty() ? " " : "") << option.metavar();
+    }
+    optss << (option.required() ? " " : "] ");
+    option_usage.emplace_back(optss.str());
   }
-  std::cout << "[options]\n";
+  std::cout << utils::stitch_str(option_usage, 80,
+                                 std::string(usage_str.size(), ' '))
+                   .substr(usage_str.size())
+            << std::endl;
 
   if (!m_description.empty()) {
     std::cout << "\n" << m_description << "\n" << std::endl;
   }
-  for (auto &option : m_options) {
-    option.help_doc();
+
+  std::vector<Option> pos_opts;
+  std::vector<Option> reg_opts;
+  std::copy_if(m_options.begin(), m_options.end(), std::back_inserter(pos_opts),
+               [](Option &o) { return !o.pos_flag().empty(); });
+  std::copy_if(m_options.begin(), m_options.end(), std::back_inserter(reg_opts),
+               [](Option &o) { return o.pos_flag().empty(); });
+
+  if (!pos_opts.empty()) {
+    std::cout << "\nPositional Arguments:" << std::endl;
+    std::for_each(pos_opts.begin(), pos_opts.end(),
+                  [](Option &o) { std::cout << o.help_doc(); });
   }
+
+  std::cout << "\nOptions:" << std::endl;
+  std::for_each(reg_opts.begin(), reg_opts.end(),
+                [](Option &o) { std::cout << o.help_doc(); });
   exit(0);
 }
 
@@ -509,7 +637,7 @@ OptionParser &OptionParser::throw_on_failure(bool throw_) {
   return *this;
 }
 
-//----------------------------------------------------------------------------
+// Provide all template specializations for get_value<T>(keyName)
 template <class T> T OptionParser::get_value(const std::string &key) {
   try {
     return m_options[m_option_idx.at(key)].found();
@@ -517,7 +645,7 @@ template <class T> T OptionParser::get_value(const std::string &key) {
     throw fail_for_missing_key(key);
   }
 }
-//----------------------------------------------------------------------------
+
 template <>
 std::string OptionParser::get_value<std::string>(const std::string &key) {
   try {
@@ -526,7 +654,7 @@ std::string OptionParser::get_value<std::string>(const std::string &key) {
     throw fail_for_missing_key(key);
   }
 }
-//----------------------------------------------------------------------------
+
 template <> double OptionParser::get_value<double>(const std::string &key) {
   try {
     return std::stod(m_values.at(key).at(0));
@@ -534,7 +662,7 @@ template <> double OptionParser::get_value<double>(const std::string &key) {
     throw fail_for_missing_key(key);
   }
 }
-//----------------------------------------------------------------------------
+
 template <> float OptionParser::get_value<float>(const std::string &key) {
   try {
     return std::stof(m_values.at(key).at(0));
@@ -542,7 +670,7 @@ template <> float OptionParser::get_value<float>(const std::string &key) {
     throw fail_for_missing_key(key);
   }
 }
-//----------------------------------------------------------------------------
+
 template <> int OptionParser::get_value<int>(const std::string &key) {
   try {
     return std::stoi(m_values.at(key).at(0));
@@ -550,7 +678,7 @@ template <> int OptionParser::get_value<int>(const std::string &key) {
     throw fail_for_missing_key(key);
   }
 }
-//----------------------------------------------------------------------------
+
 template <>
 unsigned int OptionParser::get_value<unsigned int>(const std::string &key) {
   try {
@@ -559,7 +687,7 @@ unsigned int OptionParser::get_value<unsigned int>(const std::string &key) {
     throw fail_for_missing_key(key);
   }
 }
-//----------------------------------------------------------------------------
+
 template <>
 std::vector<std::string>
 OptionParser::get_value<std::vector<std::string>>(const std::string &key) {
@@ -569,7 +697,7 @@ OptionParser::get_value<std::vector<std::string>>(const std::string &key) {
     throw fail_for_missing_key(key);
   }
 }
-//----------------------------------------------------------------------------
+
 template <>
 std::vector<int>
 OptionParser::get_value<std::vector<int>>(const std::string &key) {
@@ -584,6 +712,6 @@ OptionParser::get_value<std::vector<int>>(const std::string &key) {
   }
 }
 
-} // namespace optionparser
+} // end namespace optionparser
 
 #endif

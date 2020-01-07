@@ -3,8 +3,6 @@
 #include <iterator>
 
 #include "doctest.h"
-
-// Makes sure we don't exit on failures.
 #include "optionparser.h"
 
 template <class T, size_t N> constexpr size_t length(T (&)[N]) { return N; }
